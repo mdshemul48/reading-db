@@ -117,7 +117,17 @@
 
     <!-- Annotation tooltip that appears when text is selected -->
     <div id="annotation-tooltip" class="hidden fixed bg-white rounded shadow-lg z-50 border border-gray-200">
-        <div class="flex p-1">
+        <div class="flex p-1 items-center">
+            <div class="color-options flex space-x-1 mr-2">
+                <button class="color-option w-5 h-5 rounded-full border border-gray-300" data-color="#ffff00"
+                    style="background-color: #ffff00;" title="Yellow"></button>
+                <button class="color-option w-5 h-5 rounded-full border border-gray-300" data-color="#90ee90"
+                    style="background-color: #90ee90;" title="Green"></button>
+                <button class="color-option w-5 h-5 rounded-full border border-gray-300" data-color="#add8e6"
+                    style="background-color: #add8e6;" title="Blue"></button>
+                <button class="color-option w-5 h-5 rounded-full border border-gray-300" data-color="#ffb6c1"
+                    style="background-color: #ffb6c1;" title="Pink"></button>
+            </div>
             <button id="highlight-btn" class="p-2 rounded hover:bg-gray-100" title="Highlight">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -176,6 +186,8 @@
                 const annotationTooltip = document.getElementById('annotation-tooltip');
                 const highlightBtn = document.getElementById('highlight-btn');
                 const noteBtn = document.getElementById('note-btn');
+                const colorOptions = document.querySelectorAll('.color-option');
+                let selectedHighlightColor = '#ffff00'; // Default color
 
                 // Note editor elements
                 const noteEditor = document.getElementById('note-editor');
@@ -753,7 +765,7 @@
                                     annotation_type: type,
                                     note: type === 'note' ? noteText.value : null,
                                     position_data: JSON.stringify(positionData),
-                                    color: highlightColorSelect.value
+                                    color: selectedHighlightColor // Use selected color from tooltip
                                 })
                             })
                             .then(response => response.json())
@@ -1264,6 +1276,24 @@
                         saveProgress(currentPage, totalPages, null, true);
                     }
                 });
+
+                // Add event listeners to color options
+                colorOptions.forEach(option => {
+                    option.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Remove active state from all options
+                        colorOptions.forEach(opt => opt.classList.remove('ring-2', 'ring-blue-500'));
+                        // Add active state to selected option
+                        this.classList.add('ring-2', 'ring-blue-500');
+                        // Set selected color
+                        selectedHighlightColor = this.getAttribute('data-color');
+                        // Update the highlight color in the dropdown menu too
+                        highlightColorSelect.value = selectedHighlightColor;
+                    });
+                });
+
+                // Mark default color as selected
+                document.querySelector(`.color-option[data-color="#ffff00"]`).classList.add('ring-2', 'ring-blue-500');
             });
         </script>
     @endpush
