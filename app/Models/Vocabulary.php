@@ -75,9 +75,9 @@ class Vocabulary extends Model
 
         // Base intervals for each difficulty level (in days)
         $intervals = [
-            'easy' => [1, 3, 7, 14, 30, 60, 120, 240],
-            'medium' => [1, 2, 5, 10, 20, 40, 80, 160],
-            'hard' => [1, 1, 3, 5, 10, 20, 40, 80]
+            'easy' => [1, 2, 3, 7, 14, 30, 60, 120],
+            'medium' => [1, 1, 3, 5, 10, 20, 40, 80],
+            'hard' => [1, 1, 2, 3, 5, 10, 20, 40]
         ];
 
         // Ensure difficulty is valid, default to medium if not
