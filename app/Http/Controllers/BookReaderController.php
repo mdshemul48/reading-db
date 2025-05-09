@@ -57,6 +57,7 @@ class BookReaderController extends Controller
             $validated = $request->validate([
                 'current_page' => 'required|integer|min:1',
                 'total_pages' => 'required|integer|min:1',
+                'scroll_position' => 'nullable|numeric|min:0|max:1',
             ]);
 
             // Check if user is enrolled
@@ -75,7 +76,8 @@ class BookReaderController extends Controller
             // Update progress
             $enrollment->updateProgress(
                 $validated['current_page'],
-                $validated['total_pages']
+                $validated['total_pages'],
+                $request->has('scroll_position') ? $validated['scroll_position'] : null
             );
 
             return response()->json([

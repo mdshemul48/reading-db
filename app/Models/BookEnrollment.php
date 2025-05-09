@@ -19,6 +19,7 @@ class BookEnrollment extends Model
         'user_id',
         'book_id',
         'current_page',
+        'scroll_position',
         'total_pages',
         'last_read_at',
     ];
@@ -30,6 +31,7 @@ class BookEnrollment extends Model
      */
     protected $casts = [
         'last_read_at' => 'datetime',
+        'scroll_position' => 'float',
     ];
 
     /**
@@ -51,9 +53,13 @@ class BookEnrollment extends Model
     /**
      * Update reading progress
      */
-    public function updateProgress(int $currentPage, ?int $totalPages = null): self
+    public function updateProgress(int $currentPage, ?int $totalPages = null, ?float $scrollPosition = null): self
     {
         $this->current_page = $currentPage;
+
+        if ($scrollPosition !== null) {
+            $this->scroll_position = $scrollPosition;
+        }
 
         if ($totalPages !== null) {
             $this->total_pages = $totalPages;
@@ -71,7 +77,16 @@ class BookEnrollment extends Model
     public function getProgressPercentage(): ?int
     {
         if ($this->total_pages && $this->total_pages > 0) {
-            return (int) min(100, max(0, round(($this->current_page / $this->total_pages) * 100)));
+            $basePercentage = ($this->current_page - 1) / $this->total_pages;
+
+            // Add partial page progress if available
+            if ($this->scroll_position !== null) {
+                $pageContribution = 1 / $this->total_pages;
+                $partialPageProgress = $pageContribution * $this->scroll_position;
+                $basePercentage += $partialPageProgress;
+            }
+
+            return (int) min(100, max(0, round($basePercentage * 100)));
         }
 
         return null;
