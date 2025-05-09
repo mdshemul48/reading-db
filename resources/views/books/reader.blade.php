@@ -45,33 +45,19 @@
                                 </div>
                             @endif
                         </div>
-                        <div class="ml-4 flex space-x-2">
-                            <button id="prev-page"
-                                class="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700">Previous</button>
-                            <button id="next-page"
-                                class="px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700">Next</button>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-0">
-                    <!-- PDF Debug Info - Remove in production -->
-                    <div class="p-4 bg-gray-100 text-sm">
-                        <p>Reading: <strong>{{ $book->title }}</strong> by {{ $book->author }}</p>
-                    </div>
-
-                    <div id="pdf-container" class="w-full" style="height: calc(100vh - 260px); overflow: auto;">
-                        <div id="pdf-loading" class="flex justify-center items-center h-full">
-                            <div class="text-center">
-                                <div
-                                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-3">
-                                </div>
-                                <p>Loading PDF...</p>
-                            </div>
-                        </div>
-                        <canvas id="pdf-viewer" class="mx-auto"></canvas>
+                    <div id="pdfjs-container" style="height: calc(100vh - 250px);">
+                        @php
+                            $initialPage = $enrollment ? $enrollment->current_page : 1;
+                        @endphp
+                        <iframe id="pdf-viewer"
+                            src="{{ asset('pdfjs/web/viewer.html') }}?file={{ urlencode($pdfUrl) }}#page={{ $initialPage }}"
+                            width="100%" height="100%" frameborder="0"></iframe>
                     </div>
                 </div>
             </div>
@@ -79,188 +65,172 @@
     </div>
 
     @push('scripts')
-        <!-- Load PDF.js from CDN -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Set up PDF.js worker
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-                // Debug PDF URL
-                const pdfUrl = "{{ $pdfUrl }}";
-                console.log('PDF URL:', pdfUrl);
-
-                // Show PDF URL in the debug area for troubleshooting
-                const debugArea = document.querySelector('.p-4.bg-gray-100');
-                debugArea.innerHTML +=
-                    `<p class="mt-2 text-xs">PDF URL: <a href="${pdfUrl}" target="_blank" class="text-blue-600 underline">${pdfUrl}</a></p>`;
-
                 const initialPage = {{ $enrollment ? $enrollment->current_page : 1 }};
-                let pdfDoc = null;
-                let pageNum = initialPage;
-                let pageRendering = false;
-                let pageNumPending = null;
-                let canvas = document.getElementById('pdf-viewer');
-                let ctx = canvas.getContext('2d');
-                let pdfContainer = document.getElementById('pdf-container');
-                let loadingIndicator = document.getElementById('pdf-loading');
-                let scale = 1.5;
+                const pdfViewer = document.getElementById('pdf-viewer');
+                let viewerLoaded = false;
 
-                // Load the PDF using PDF.js
-                loadPDF();
+                // Set up message listener to communicate with the PDF.js viewer
+                window.addEventListener('message', function(e) {
+                    // Security check - only accept messages from our PDF.js viewer iframe
+                    if (e.source !== pdfViewer.contentWindow) return;
 
-                function loadPDF() {
-                    // Try to load the PDF with proper error handling
-                    debugArea.innerHTML += `<p class="mt-2 text-xs">Attempting to load PDF...</p>`;
+                    const message = e.data;
 
-                    // Create a fetch request to test if the file is accessible
-                    fetch(pdfUrl, {
-                            method: 'HEAD'
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! Status: ${response.status}`);
+                    // Handle page change events from PDF.js
+                    if (message && message.type === 'pagechange') {
+                        const currentPage = message.page;
+                        const totalPages = message.total || document.getElementById('total-pages').textContent;
+
+                        // Update UI
+                        document.getElementById('current-page').textContent = currentPage;
+                        document.getElementById('total-pages').textContent = totalPages;
+                        updateProgress(currentPage, totalPages);
+
+                        // Save progress
+                        saveProgressDebounced(currentPage, totalPages);
+                    }
+                });
+
+                // Hook into PDF.js iframe load
+                pdfViewer.addEventListener('load', function() {
+                    console.log('PDF.js viewer loaded');
+
+                    // We'll use multiple approaches to ensure the initial page is set correctly
+                    setInitialPage();
+                });
+
+                function setInitialPage() {
+                    // Retry mechanism to ensure PDF.js is properly loaded and page is set
+                    let attempts = 0;
+                    const maxAttempts = 10;
+
+                    function attemptSetPage() {
+                        if (attempts >= maxAttempts) {
+                            console.warn("Maximum attempts reached for setting initial page");
+                            return;
+                        }
+
+                        attempts++;
+
+                        try {
+                            const frameWindow = pdfViewer.contentWindow;
+
+                            // Check if PDF.js is loaded and initialized
+                            if (!frameWindow.PDFViewerApplication ||
+                                !frameWindow.PDFViewerApplication.initialized ||
+                                !frameWindow.PDFViewerApplication.pdfViewer) {
+                                console.log(`PDF.js not yet ready (attempt ${attempts}), retrying in 500ms...`);
+                                setTimeout(attemptSetPage, 500);
+                                return;
                             }
-                            debugArea.innerHTML +=
-                                `<p class="mt-2 text-xs text-green-600">PDF is accessible, loading now...</p>`;
 
-                            // PDF is accessible, try to load it with PDF.js
-                            return pdfjsLib.getDocument({
-                                url: pdfUrl,
-                                cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
-                                cMapPacked: true,
-                            }).promise;
-                        })
-                        .then(pdf => {
-                            console.log('PDF loaded successfully');
-                            debugArea.innerHTML +=
-                                `<p class="mt-2 text-xs text-green-600">PDF loaded! Pages: ${pdf.numPages}</p>`;
+                            const PDFViewerApplication = frameWindow.PDFViewerApplication;
 
-                            pdfDoc = pdf;
+                            // Inject communication script into PDF.js iframe
+                            const frameDoc = frameWindow.document;
+                            const script = frameDoc.createElement('script');
+                            script.textContent = `
+                                (function() {
+                                    const PDFViewerApplication = window.PDFViewerApplication;
 
-                            // Update total pages
-                            const totalPages = pdf.numPages;
-                            document.getElementById('total-pages').textContent = totalPages;
+                                    // Add page change event listener
+                                    PDFViewerApplication.eventBus.on('pagechanging', function(evt) {
+                                        // Send message to parent window
+                                        window.parent.postMessage({
+                                            type: 'pagechange',
+                                            page: evt.pageNumber,
+                                            total: PDFViewerApplication.pagesCount
+                                        }, '*');
+                                    });
 
-                            // Hide loading indicator
-                            loadingIndicator.style.display = 'none';
+                                    // Set initial page after document is fully loaded
+                                    if (!PDFViewerApplication.pdfDocument) {
+                                        PDFViewerApplication.eventBus.on('documentloaded', function() {
+                                            // Force the page change event to trigger
+                                            window.parent.postMessage({
+                                                type: 'pagechange',
+                                                page: PDFViewerApplication.page,
+                                                total: PDFViewerApplication.pagesCount
+                                            }, '*');
+                                        });
+                                    } else {
+                                        // Document already loaded, force event
+                                        window.parent.postMessage({
+                                            type: 'pagechange',
+                                            page: PDFViewerApplication.page,
+                                            total: PDFViewerApplication.pagesCount
+                                        }, '*');
+                                    }
+                                })();
+                            `;
 
-                            // Update progress and render first page
-                            updateProgress(pageNum, totalPages);
-                            renderPage(pageNum);
-                        })
-                        .catch(error => {
-                            console.error('Error loading PDF:', error);
-                            debugArea.innerHTML +=
-                                `<p class="mt-2 text-xs text-red-600">Error: ${error.message}</p>`;
-                            loadingIndicator.innerHTML = `
-                                <div class="text-center">
-                                    <div class="text-red-500 mb-3">Error loading PDF: ${error.message}</div>
-                                    <button id="retry-load" class="px-4 py-2 bg-blue-600 text-white rounded">Retry</button>
-                                </div>`;
+                            // Append script to PDF.js document body
+                            frameDoc.body.appendChild(script);
 
-                            // Add retry button functionality
-                            document.getElementById('retry-load').addEventListener('click', loadPDF);
-                        });
-                }
-
-                // Render a specific page
-                function renderPage(num) {
-                    pageRendering = true;
-
-                    // Update current page display
-                    document.getElementById('current-page').textContent = num;
-
-                    // Get the page from the PDF document
-                    pdfDoc.getPage(num).then(function(page) {
-                        // Calculate the scale to fit the page within the container width
-                        const containerWidth = pdfContainer.clientWidth;
-                        const viewport = page.getViewport({
-                            scale: 1
-                        });
-                        const scaleFactor = containerWidth / viewport.width;
-                        const scaledViewport = page.getViewport({
-                            scale: Math.min(scale, scaleFactor * 0.95)
-                        });
-
-                        // Set canvas dimensions to match the viewport
-                        canvas.height = scaledViewport.height;
-                        canvas.width = scaledViewport.width;
-
-                        // Render the PDF page
-                        const renderContext = {
-                            canvasContext: ctx,
-                            viewport: scaledViewport
-                        };
-
-                        const renderTask = page.render(renderContext);
-
-                        // When rendering is complete, update status
-                        renderTask.promise.then(function() {
-                            pageRendering = false;
-
-                            // If another page is pending, render it
-                            if (pageNumPending !== null) {
-                                renderPage(pageNumPending);
-                                pageNumPending = null;
-                            }
-                        });
-                    });
-                }
-
-                // Queue the rendering of a page
-                function queueRenderPage(num) {
-                    if (pageRendering) {
-                        pageNumPending = num;
-                    } else {
-                        renderPage(num);
+                            console.log('Successfully injected PDF.js script');
+                        } catch (err) {
+                            console.error('Error setting initial page:', err);
+                            setTimeout(attemptSetPage, 500);
+                        }
                     }
+
+                    // Start the attempt process
+                    setTimeout(attemptSetPage, 500);
                 }
 
-                // Go to previous page
-                function onPrevPage() {
-                    if (pageNum <= 1) {
-                        return;
-                    }
-                    pageNum--;
-                    queueRenderPage(pageNum);
-                    updateProgress(pageNum, pdfDoc.numPages);
-                }
+                // Debounce function for saving progress
+                const saveProgressDebounced = (function() {
+                    let timer;
+                    return function(currentPage, totalPages) {
+                        clearTimeout(timer);
+                        timer = setTimeout(() => {
+                            saveProgress(currentPage, totalPages);
+                        }, 500);
+                    };
+                })();
 
-                // Go to next page
-                function onNextPage() {
-                    if (pageNum >= pdfDoc.numPages) {
-                        return;
-                    }
-                    pageNum++;
-                    queueRenderPage(pageNum);
-                    updateProgress(pageNum, pdfDoc.numPages);
-                }
-
-                // Update reading progress in the backend
+                // Update the progress UI
                 function updateProgress(currentPage, totalPages) {
-                    if (!totalPages || totalPages < 1) return;
+                    if (!totalPages || isNaN(totalPages)) return;
 
-                    // Calculate and update the visual progress bar
                     const progressPercentage = Math.round((currentPage / totalPages) * 100);
                     document.getElementById('progress-percentage').textContent = progressPercentage;
                     document.getElementById('progress-bar').style.width = progressPercentage + '%';
+                }
 
-                    // Save progress to the server
-                    const data = {
-                        current_page: currentPage,
-                        total_pages: totalPages
+                // Save progress to the server
+                function saveProgress(currentPage, totalPages, isSynchronous = false) {
+                    const requestData = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            current_page: currentPage,
+                            total_pages: totalPages,
+                            last_read_at: new Date().toISOString()
+                        })
                     };
 
-                    fetch("{{ route('books.update-progress', $book) }}", {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify(data)
-                        })
+                    // If synchronous (like beforeunload), use navigator.sendBeacon
+                    if (isSynchronous && navigator.sendBeacon) {
+                        const blob = new Blob([JSON.stringify({
+                            current_page: currentPage,
+                            total_pages: totalPages,
+                            last_read_at: new Date().toISOString()
+                        })], {
+                            type: 'application/json'
+                        });
+
+                        navigator.sendBeacon("{{ route('books.update-progress', $book) }}", blob);
+                        return;
+                    }
+
+                    // Otherwise use standard fetch
+                    fetch("{{ route('books.update-progress', $book) }}", requestData)
                         .then(response => response.json())
                         .then(data => {
                             console.log('Progress updated:', data);
@@ -270,24 +240,13 @@
                         });
                 }
 
-                // Set up event listeners
-                document.getElementById('prev-page').addEventListener('click', onPrevPage);
-                document.getElementById('next-page').addEventListener('click', onNextPage);
+                // Save progress when user leaves the page
+                window.addEventListener('beforeunload', function() {
+                    const currentPage = parseInt(document.getElementById('current-page').textContent);
+                    const totalPages = parseInt(document.getElementById('total-pages').textContent);
 
-                // Handle keyboard navigation
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowLeft') {
-                        onPrevPage();
-                    } else if (e.key === 'ArrowRight') {
-                        onNextPage();
-                    }
-                });
-
-                // Handle window resize
-                window.addEventListener('resize', function() {
-                    if (pdfDoc) {
-                        // Re-render the current page when the window is resized
-                        renderPage(pageNum);
+                    if (!isNaN(currentPage) && !isNaN(totalPages)) {
+                        saveProgress(currentPage, totalPages, true);
                     }
                 });
             });
