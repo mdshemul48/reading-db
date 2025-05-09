@@ -21,6 +21,29 @@
                         <h3 class="text-2xl font-bold mb-4">{{ $vocabulary->word }}</h3>
 
                         <div class="flex items-center mb-4">
+                            <button id="pronounce-btn"
+                                class="mr-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                Pronounce
+                            </button>
+                            <div id="audio-status" class="text-sm text-gray-500 mr-4 hidden">
+                                <span class="loading">
+                                    <svg class="animate-spin h-4 w-4 text-blue-500 inline mr-1"
+                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                            stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>
+                                    Loading audio...
+                                </span>
+                            </div>
                             <span
                                 class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                                 {{ $vocabulary->difficulty === 'easy'
@@ -318,6 +341,111 @@
 
             cancelDeleteBtn.addEventListener('click', function() {
                 deleteModal.classList.add('hidden');
+            });
+
+            // Pronunciation feature
+            const pronounceBtn = document.getElementById('pronounce-btn');
+            const audioStatus = document.getElementById('audio-status');
+            const word = "{{ $vocabulary->word }}"; // Get the word
+
+            // Function to play pronunciation using Web Speech API
+            function playWebSpeechPronunciation() {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(word);
+
+                    // Try to get a good voice
+                    let voices = speechSynthesis.getVoices();
+                    if (voices.length > 0) {
+                        // Prefer voices with these names (they tend to sound better)
+                        const preferredVoices = ['Google UK English', 'Microsoft Zira', 'Alex', 'Samantha'];
+                        for (const name of preferredVoices) {
+                            const voice = voices.find(v => v.name.includes(name));
+                            if (voice) {
+                                utterance.voice = voice;
+                                break;
+                            }
+                        }
+
+                        // If no preferred voice found, try to find a good English voice
+                        if (!utterance.voice) {
+                            const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+                            if (englishVoice) {
+                                utterance.voice = englishVoice;
+                            }
+                        }
+                    }
+
+                    // Set properties for better pronunciation
+                    utterance.rate = 0.9; // Slightly slower
+                    utterance.pitch = 1.0; // Normal pitch
+
+                    // Speak the word
+                    speechSynthesis.speak(utterance);
+                } else {
+                    // Fallback if speech synthesis isn't available
+                    console.log('Speech synthesis not supported');
+                    alert('Speech synthesis is not supported in your browser.');
+                }
+            }
+
+            // Function to fetch high-quality audio from external API
+            function fetchExternalPronunciation() {
+                audioStatus.classList.remove('hidden');
+
+                // Attempt to get pronunciation from Free Dictionary API
+                fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Word not found');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Look for audio URL in the response
+                        let audioUrl = null;
+
+                        // Try to find a phonetics entry with audio
+                        if (data[0] && data[0].phonetics) {
+                            const phoneticsWithAudio = data[0].phonetics.filter(p => p.audio && p.audio
+                                .trim() !== '');
+
+                            if (phoneticsWithAudio.length > 0) {
+                                // Prefer US pronunciation if available
+                                const usAudio = phoneticsWithAudio.find(p => p.audio.includes('us.mp3'));
+                                audioUrl = usAudio ? usAudio.audio : phoneticsWithAudio[0].audio;
+                            }
+                        }
+
+                        if (audioUrl) {
+                            // Create and play audio element
+                            const audio = new Audio(audioUrl);
+                            audio.onloadeddata = function() {
+                                audioStatus.classList.add('hidden');
+                            };
+                            audio.onerror = function() {
+                                audioStatus.classList.add('hidden');
+                                // Fallback to Web Speech API
+                                playWebSpeechPronunciation();
+                            };
+                            audio.play();
+                        } else {
+                            // No audio URL found, use Web Speech API
+                            audioStatus.classList.add('hidden');
+                            playWebSpeechPronunciation();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching pronunciation:', error);
+                        audioStatus.classList.add('hidden');
+                        // Fallback to Web Speech API
+                        playWebSpeechPronunciation();
+                    });
+            }
+
+            // Add click event for pronunciation button
+            pronounceBtn.addEventListener('click', function() {
+                // Try to get high-quality audio first
+                fetchExternalPronunciation();
             });
 
             // Quick Review

@@ -5,6 +5,10 @@
                 {{ __('My Vocabulary') }}
             </h2>
             <div class="flex space-x-3">
+                <button id="add-word-btn"
+                    class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">
+                    Add Word
+                </button>
                 <a href="{{ route('vocabulary.stats') }}"
                     class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">
                     View Statistics
@@ -281,6 +285,111 @@
         </div>
     </div>
 
+    <!-- Add Vocabulary Word Modal -->
+    <div id="add-word-modal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Add New Vocabulary Word
+                            </h3>
+                            <div class="mt-4">
+                                <form id="add-word-form" class="space-y-4">
+                                    <div>
+                                        <label for="word"
+                                            class="block text-sm font-medium text-gray-700">Word</label>
+                                        <input type="text" name="word" id="word"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                            required>
+                                    </div>
+
+                                    <div>
+                                        <label for="definition"
+                                            class="block text-sm font-medium text-gray-700">Definition</label>
+                                        <textarea name="definition" id="definition" rows="3"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label for="context" class="block text-sm font-medium text-gray-700">Context
+                                            (Example Sentence)</label>
+                                        <textarea name="context" id="context" rows="2"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label for="notes" class="block text-sm font-medium text-gray-700">Personal
+                                            Notes</label>
+                                        <textarea name="notes" id="notes" rows="2"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label for="book_id" class="block text-sm font-medium text-gray-700">Book
+                                            (Optional)</label>
+                                        <select name="book_id" id="book_id"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                            <option value="">No Book</option>
+                                            @foreach ($books as $book)
+                                                <option value="{{ $book->id }}">{{ $book->title }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="page_number" class="block text-sm font-medium text-gray-700">Page
+                                            Number (Optional)</label>
+                                        <input type="number" name="page_number" id="page_number" min="1"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Difficulty Level</label>
+                                        <div class="mt-2 flex space-x-6">
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" class="form-radio" name="difficulty"
+                                                    value="easy">
+                                                <span class="ml-2 text-green-600">Easy</span>
+                                            </label>
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" class="form-radio" name="difficulty"
+                                                    value="medium" checked>
+                                                <span class="ml-2 text-yellow-600">Medium</span>
+                                            </label>
+                                            <label class="inline-flex items-center">
+                                                <input type="radio" class="form-radio" name="difficulty"
+                                                    value="hard">
+                                                <span class="ml-2 text-red-600">Hard</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div id="add-word-error" class="text-red-600 hidden"></div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" id="save-word-btn"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Save Word
+                    </button>
+                    <button type="button" id="cancel-add-word"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript for Delete Modal -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -307,6 +416,82 @@
             deleteModal.addEventListener('click', function(e) {
                 if (e.target === deleteModal) {
                     deleteModal.classList.add('hidden');
+                }
+            });
+
+            // Add Word Modal
+            const addWordModal = document.getElementById('add-word-modal');
+            const addWordBtn = document.getElementById('add-word-btn');
+            const saveWordBtn = document.getElementById('save-word-btn');
+            const cancelAddWordBtn = document.getElementById('cancel-add-word');
+            const addWordForm = document.getElementById('add-word-form');
+            const addWordError = document.getElementById('add-word-error');
+
+            // Show modal when add word button is clicked
+            addWordBtn.addEventListener('click', function() {
+                addWordModal.classList.remove('hidden');
+                addWordError.classList.add('hidden');
+                addWordError.textContent = '';
+            });
+
+            // Hide modal when cancel button is clicked
+            cancelAddWordBtn.addEventListener('click', function() {
+                addWordModal.classList.add('hidden');
+                addWordForm.reset();
+            });
+
+            // Save word
+            saveWordBtn.addEventListener('click', function() {
+                // Get form data
+                const formData = {
+                    word: document.getElementById('word').value.trim(),
+                    definition: document.getElementById('definition').value.trim() || null,
+                    context: document.getElementById('context').value.trim() || null,
+                    notes: document.getElementById('notes').value.trim() || null,
+                    book_id: document.getElementById('book_id').value || null,
+                    page_number: document.getElementById('page_number').value || null,
+                    difficulty: document.querySelector('input[name="difficulty"]:checked').value
+                };
+
+                // Validate required fields
+                if (!formData.word) {
+                    addWordError.textContent = 'Word is required';
+                    addWordError.classList.remove('hidden');
+                    return;
+                }
+
+                // Send data to server
+                fetch('{{ route('vocabulary.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Success - reload page to show the new word
+                            window.location.reload();
+                        } else {
+                            // Error
+                            addWordError.textContent = data.message || 'Error saving vocabulary word';
+                            addWordError.classList.remove('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        addWordError.textContent = 'An error occurred while saving the vocabulary word';
+                        addWordError.classList.remove('hidden');
+                    });
+            });
+
+            // Hide modal when clicking outside
+            addWordModal.addEventListener('click', function(e) {
+                if (e.target === addWordModal) {
+                    addWordModal.classList.add('hidden');
+                    addWordForm.reset();
                 }
             });
         });

@@ -44,7 +44,12 @@ class BookReaderController extends Controller
         $pdfPath = $book->file_path;
         $pdfUrl = url(Storage::url($pdfPath));
 
-        return view('books.reader', compact('book', 'enrollment', 'pdfUrl'));
+        // Get both owned books and enrolled books for the vocabulary modal
+        $ownedBooks = Book::where('user_id', auth()->id())->get();
+        $enrolledBooks = auth()->user()->enrolledBooks()->get();
+        $books = $ownedBooks->merge($enrolledBooks)->unique('id');
+
+        return view('books.reader', compact('book', 'enrollment', 'pdfUrl', 'books'));
     }
 
     /**

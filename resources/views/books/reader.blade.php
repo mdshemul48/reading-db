@@ -145,6 +145,13 @@
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
             </button>
+            <button id="pronounce-tooltip-btn" class="p-2 rounded hover:bg-gray-100" title="Pronounce">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m5.656-5.656a2 2 0 010 2.828m-5.656 0a2 2 0 010-2.828m8.486-8.486a2 2 0 013.536 0" />
+                </svg>
+            </button>
             <button id="search-definition-btn" class="p-2 rounded hover:bg-gray-100" title="Search Definition">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -173,6 +180,20 @@
                         d="M3 6l9 4 9-4M3 10l9 4 9-4m-9-4v12" />
                 </svg>
             </button>
+        </div>
+        <!-- Audio status indicator for pronunciation -->
+        <div id="tooltip-audio-status" class="hidden text-center py-1 text-xs text-gray-500 bg-gray-100 w-full">
+            <span class="loading">
+                <svg class="animate-spin h-3 w-3 text-blue-500 inline mr-1" xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                        stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                Loading audio...
+            </span>
         </div>
     </div>
 
@@ -259,6 +280,19 @@
                                         class="block text-sm font-medium text-gray-700">Personal Notes</label>
                                     <textarea name="vocabulary-notes" id="vocabulary-notes" rows="2"
                                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700">Book</label>
+                                    <input type="hidden" name="vocabulary-book" id="vocabulary-book"
+                                        value="{{ $book->id }}">
+                                    <div class="mt-1 p-2 bg-gray-50 rounded-md text-gray-700">{{ $book->title }}
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="vocabulary-page" class="block text-sm font-medium text-gray-700">Page
+                                        Number</label>
+                                    <input type="number" name="vocabulary-page" id="vocabulary-page"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                                 </div>
                                 <div class="mb-4">
                                     <label class="block text-sm font-medium text-gray-700">Difficulty Level</label>
@@ -369,6 +403,8 @@
                 const searchWebBtn = document.getElementById('search-web-btn');
                 const saveVocabularyBtn = document.getElementById('save-vocabulary-btn');
                 const dictionaryLookupBtn = document.getElementById('dictionary-lookup-btn');
+                const pronounceTooltipBtn = document.getElementById('pronounce-tooltip-btn');
+                const tooltipAudioStatus = document.getElementById('tooltip-audio-status');
                 const colorOptions = document.querySelectorAll('.color-option');
                 let selectedHighlightColor = '#ffff00'; // Default color
 
@@ -1710,6 +1746,10 @@
                         vocabularyContext.value = '';
                     }
 
+                    // Set current page number
+                    const currentPage = pdfViewer.contentWindow.PDFViewerApplication?.page || 1;
+                    document.getElementById('vocabulary-page').value = currentPage;
+
                     // Show the vocabulary modal
                     vocabularyModal.classList.remove('hidden');
 
@@ -1851,6 +1891,10 @@
                     vocabularyWord.value = currentWord;
                     vocabularyDefinition.value = currentDefinition;
 
+                    // Set current page number
+                    const currentPage = pdfViewer.contentWindow.PDFViewerApplication?.page || 1;
+                    document.getElementById('vocabulary-page').value = currentPage;
+
                     // Hide dictionary modal and show vocabulary modal
                     dictionaryModal.classList.add('hidden');
                     vocabularyModal.classList.remove('hidden');
@@ -1877,7 +1921,8 @@
                         notes: vocabularyNotes.value.trim() || null,
                         difficulty: selectedDifficulty,
                         book_id: bookId,
-                        page_number: pdfViewer.contentWindow.PDFViewerApplication?.page || 1
+                        page_number: document.getElementById('vocabulary-page').value || pdfViewer
+                            .contentWindow.PDFViewerApplication?.page || 1
                     };
 
                     if (!wordData.word) {
@@ -1943,6 +1988,107 @@
                             alert('Error saving word: ' + error.message);
                         });
                 });
+
+                // Pronunciation functionality for the tooltip
+                pronounceTooltipBtn.addEventListener('click', function() {
+                    if (!currentSelection) return;
+
+                    const selectedText = currentSelection.toString().trim();
+                    if (selectedText.length === 0) return;
+
+                    // Show loading indicator
+                    tooltipAudioStatus.classList.remove('hidden');
+
+                    // Try to fetch high-quality audio from Free Dictionary API first
+                    fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(selectedText)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Word not found');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Look for audio URL in the response
+                            let audioUrl = null;
+
+                            // Try to find a phonetics entry with audio
+                            if (data[0] && data[0].phonetics) {
+                                const phoneticsWithAudio = data[0].phonetics.filter(p => p.audio && p.audio
+                                    .trim() !== '');
+
+                                if (phoneticsWithAudio.length > 0) {
+                                    // Prefer US pronunciation if available
+                                    const usAudio = phoneticsWithAudio.find(p => p.audio.includes(
+                                        'us.mp3'));
+                                    audioUrl = usAudio ? usAudio.audio : phoneticsWithAudio[0].audio;
+                                }
+                            }
+
+                            if (audioUrl) {
+                                // Create and play audio element
+                                const audio = new Audio(audioUrl);
+                                audio.onloadeddata = function() {
+                                    tooltipAudioStatus.classList.add('hidden');
+                                };
+                                audio.onerror = function() {
+                                    tooltipAudioStatus.classList.add('hidden');
+                                    // Fallback to Web Speech API
+                                    playWebSpeechPronunciation(selectedText);
+                                };
+                                audio.play();
+                            } else {
+                                // No audio URL found, use Web Speech API
+                                tooltipAudioStatus.classList.add('hidden');
+                                playWebSpeechPronunciation(selectedText);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching pronunciation:', error);
+                            tooltipAudioStatus.classList.add('hidden');
+                            // Fallback to Web Speech API
+                            playWebSpeechPronunciation(selectedText);
+                        });
+                });
+
+                // Function to play pronunciation using Web Speech API
+                function playWebSpeechPronunciation(text) {
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(text);
+
+                        // Try to get a good voice
+                        let voices = speechSynthesis.getVoices();
+                        if (voices.length > 0) {
+                            // Prefer voices with these names (they tend to sound better)
+                            const preferredVoices = ['Google UK English', 'Microsoft Zira', 'Alex', 'Samantha'];
+                            for (const name of preferredVoices) {
+                                const voice = voices.find(v => v.name.includes(name));
+                                if (voice) {
+                                    utterance.voice = voice;
+                                    break;
+                                }
+                            }
+
+                            // If no preferred voice found, try to find a good English voice
+                            if (!utterance.voice) {
+                                const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+                                if (englishVoice) {
+                                    utterance.voice = englishVoice;
+                                }
+                            }
+                        }
+
+                        // Set properties for better pronunciation
+                        utterance.rate = 0.9; // Slightly slower
+                        utterance.pitch = 1.0; // Normal pitch
+
+                        // Speak the word
+                        speechSynthesis.speak(utterance);
+                    } else {
+                        // Fallback if speech synthesis isn't available
+                        console.log('Speech synthesis not supported');
+                        alert('Speech synthesis is not supported in your browser.');
+                    }
+                }
             });
         </script>
     @endpush
