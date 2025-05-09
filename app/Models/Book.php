@@ -49,6 +49,7 @@ class Book extends Model
     public function enrolledUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'book_enrollments')
+            ->withPivot(['current_page', 'total_pages', 'last_read_at'])
             ->withTimestamps();
     }
 

@@ -48,7 +48,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    
+
     /**
      * Check if user is an admin
      */
@@ -56,7 +56,7 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
-    
+
     /**
      * Check if user has a specific role
      */
@@ -64,7 +64,7 @@ class User extends Authenticatable
     {
         return $this->role === $role;
     }
-    
+
     /**
      * Get the books uploaded by this user
      */
@@ -72,16 +72,17 @@ class User extends Authenticatable
     {
         return $this->hasMany(Book::class);
     }
-    
+
     /**
      * Get the books this user is enrolled in
      */
     public function enrolledBooks(): BelongsToMany
     {
         return $this->belongsToMany(Book::class, 'book_enrollments')
+            ->withPivot(['current_page', 'total_pages', 'last_read_at'])
             ->withTimestamps();
     }
-    
+
     /**
      * Check if user is enrolled in a specific book
      */

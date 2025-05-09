@@ -118,14 +118,32 @@
                                             </p>
                                             <div class="flex justify-between items-center mt-3">
                                                 <span
-                                                    class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">Enrolled</span>
-                                                <div class="flex space-x-2">
-                                                    <a href="{{ route('books.download', $book) }}"
-                                                        class="text-blue-600 hover:text-blue-800">Download</a>
-                                                    <a href="{{ route('books.show', $book) }}"
-                                                        class="text-blue-600 hover:text-blue-800">View</a>
-                                                </div>
+                                                    class="px-2 py-1 text-xs rounded {{ $book->is_private ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' }}">
+                                                    {{ $book->is_private ? 'Private' : 'Public' }}
+                                                </span>
+
+                                                @if ($book->pivot->total_pages)
+                                                    <span class="text-xs text-gray-600">
+                                                        {{ $book->pivot->current_page }} /
+                                                        {{ $book->pivot->total_pages }} pages
+                                                        ({{ round(($book->pivot->current_page / $book->pivot->total_pages) * 100) }}%)
+                                                    </span>
+                                                @endif
                                             </div>
+
+                                            @if ($book->pivot->total_pages)
+                                                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                                                    <div class="bg-blue-600 h-1.5 rounded-full"
+                                                        style="width: {{ round(($book->pivot->current_page / $book->pivot->total_pages) * 100) }}%">
+                                                    </div>
+                                                </div>
+                                                <div class="mt-2 text-xs text-gray-500">
+                                                    @if ($book->pivot->last_read_at)
+                                                        Last read
+                                                        {{ \Carbon\Carbon::parse($book->pivot->last_read_at)->diffForHumans() }}
+                                                    @endif
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 @endif

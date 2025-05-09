@@ -108,7 +108,20 @@ class BookController extends Controller
 
         $isEnrolled = auth()->user()->isEnrolledIn($book);
 
-        return view('books.show', compact('book', 'isEnrolled'));
+        // Get enrollment details with reading progress if enrolled
+        $enrollment = null;
+        if ($isEnrolled) {
+            $enrollment = auth()->user()->enrolledBooks()
+                ->where('book_id', $book->id)
+                ->first()->pivot;
+
+            // Cast last_read_at to Carbon datetime instance if it exists
+            if ($enrollment->last_read_at) {
+                $enrollment->last_read_at = \Carbon\Carbon::parse($enrollment->last_read_at);
+            }
+        }
+
+        return view('books.show', compact('book', 'isEnrolled', 'enrollment'));
     }
 
     /**

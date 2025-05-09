@@ -4,6 +4,7 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\BookEnrollmentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\BookReaderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -31,6 +32,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/books/{book}/enrollments', [BookController::class, 'enrollments'])->name('books.enrollments');
     Route::delete('/books/{book}/enrollments/{user}', [BookController::class, 'removeEnrollment'])->name('books.remove-enrollment');
     Route::resource('books', BookController::class);
+
+    // PDF Reader routes
+    Route::get('/books/{book}/read', [BookReaderController::class, 'reader'])->name('books.reader');
+    Route::post('/books/{book}/progress', [BookReaderController::class, 'updateProgress'])
+        ->name('books.update-progress')
+        ->middleware('web');
 
     // Book enrollment routes
     Route::post('/books/{book}/enroll', [BookEnrollmentController::class, 'enroll'])->name('books.enroll');
