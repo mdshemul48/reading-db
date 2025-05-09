@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -14,7 +15,7 @@ class BookController extends Controller
     public function index()
     {
         $publicBooks = Book::public()->latest()->get();
-        
+
         if (auth()->check()) {
             $userBooks = auth()->user()->uploadedBooks;
             $enrolledBooks = auth()->user()->enrolledBooks;
@@ -22,7 +23,7 @@ class BookController extends Controller
             $userBooks = collect();
             $enrolledBooks = collect();
         }
-        
+
         return view('books.index', compact('publicBooks', 'userBooks', 'enrolledBooks'));
     }
 
@@ -42,7 +43,7 @@ class BookController extends Controller
     {
         $enrolledBooks = auth()->user()->enrolledBooks()->latest()->get();
         $uploadedBooks = auth()->user()->uploadedBooks()->latest()->get();
-        
+
         return view('books.my-books', compact('enrolledBooks', 'uploadedBooks'));
     }
 
@@ -67,16 +68,16 @@ class BookController extends Controller
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480',
             'is_private' => 'sometimes|boolean',
         ]);
-        
+
         // Handle PDF file upload
         $pdfPath = $request->file('pdf_file')->store('books', 'public');
-        
+
         // Handle thumbnail upload if provided
         $thumbnailPath = null;
         if ($request->hasFile('thumbnail')) {
             $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
         }
-        
+
         // Create book
         $book = Book::create([
             'title' => $request->title,
@@ -87,10 +88,10 @@ class BookController extends Controller
             'is_private' => (bool) $request->input('is_private', false),
             'user_id' => auth()->id(),
         ]);
-        
+
         // Auto-enroll the uploader
         $book->enrolledUsers()->attach(auth()->id());
-        
+
         return redirect()->route('books.show', $book)
             ->with('success', 'Book uploaded successfully.');
     }
@@ -104,9 +105,9 @@ class BookController extends Controller
         if ($book->is_private && $book->user_id !== auth()->id() && !auth()->user()->isEnrolledIn($book)) {
             abort(403, 'You do not have access to this book.');
         }
-        
+
         $isEnrolled = auth()->user()->isEnrolledIn($book);
-        
+
         return view('books.show', compact('book', 'isEnrolled'));
     }
 
@@ -119,7 +120,7 @@ class BookController extends Controller
         if ($book->is_private && $book->user_id !== auth()->id() && !auth()->user()->isEnrolledIn($book)) {
             abort(403, 'You do not have access to this book.');
         }
-        
+
         return Storage::disk('public')->download($book->file_path, $book->title . '.pdf');
     }
 
@@ -132,7 +133,7 @@ class BookController extends Controller
         if ($book->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
             abort(403, 'You cannot edit this book.');
         }
-        
+
         return view('books.edit', compact('book'));
     }
 
@@ -145,7 +146,7 @@ class BookController extends Controller
         if ($book->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
             abort(403, 'You cannot edit this book.');
         }
-        
+
         $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'nullable|string|max:255',
@@ -154,38 +155,38 @@ class BookController extends Controller
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480',
             'is_private' => 'sometimes|boolean',
         ]);
-        
+
         $data = [
             'title' => $request->title,
             'author' => $request->author,
             'description' => $request->description,
             'is_private' => (bool) $request->input('is_private', false),
         ];
-        
+
         // Handle PDF file upload if new file provided
         if ($request->hasFile('pdf_file')) {
             // Delete old file
             Storage::disk('public')->delete($book->file_path);
-            
+
             // Store new file
             $pdfPath = $request->file('pdf_file')->store('books', 'public');
             $data['file_path'] = $pdfPath;
         }
-        
+
         // Handle thumbnail upload if new thumbnail provided
         if ($request->hasFile('thumbnail')) {
             // Delete old thumbnail if exists
             if ($book->thumbnail_path) {
                 Storage::disk('public')->delete($book->thumbnail_path);
             }
-            
+
             // Store new thumbnail
             $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
             $data['thumbnail_path'] = $thumbnailPath;
         }
-        
+
         $book->update($data);
-        
+
         return redirect()->route('books.show', $book)
             ->with('success', 'Book updated successfully.');
     }
@@ -199,17 +200,65 @@ class BookController extends Controller
         if ($book->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
             abort(403, 'You cannot delete this book.');
         }
-        
+
+        // Check if other users are enrolled in this book
+        $otherEnrollments = $book->enrolledUsers()
+            ->where('users.id', '!=', auth()->id())
+            ->exists();
+
+        if ($otherEnrollments) {
+            return redirect()->route('books.show', $book)
+                ->with('error', 'This book cannot be deleted because other users are enrolled in it.');
+        }
+
         // Delete files
         Storage::disk('public')->delete($book->file_path);
         if ($book->thumbnail_path) {
             Storage::disk('public')->delete($book->thumbnail_path);
         }
-        
+
         // Delete book and enrollments (cascading)
         $book->delete();
-        
+
         return redirect()->route('books.index')
             ->with('success', 'Book deleted successfully.');
+    }
+
+    /**
+     * Show enrolled users for the book and allow owner to manage them.
+     */
+    public function enrollments(Book $book)
+    {
+        // Check if user owns this book
+        if ($book->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
+            abort(403, 'You can only manage enrollments for your own books.');
+        }
+
+        $enrolledUsers = $book->enrolledUsers()->orderBy('name')->get();
+
+        return view('books.enrollments', compact('book', 'enrolledUsers'));
+    }
+
+    /**
+     * Remove a user's enrollment (by the book owner).
+     */
+    public function removeEnrollment(Book $book, User $user)
+    {
+        // Check if current user is the book owner
+        if ($book->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
+            abort(403, 'You can only manage enrollments for your own books.');
+        }
+
+        // Don't allow removing the owner's enrollment
+        if ($user->id === $book->user_id) {
+            return redirect()->route('books.enrollments', $book)
+                ->with('error', 'You cannot remove your own enrollment as the book owner.');
+        }
+
+        // Remove the enrollment
+        $book->enrolledUsers()->detach($user->id);
+
+        return redirect()->route('books.enrollments', $book)
+            ->with('success', "User {$user->name} has been unenrolled from this book.");
     }
 }

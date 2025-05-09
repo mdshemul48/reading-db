@@ -16,18 +16,18 @@ class BookEnrollmentController extends Controller
         if ($book->is_private && $book->user_id !== auth()->id()) {
             abort(403, 'You cannot enroll in this private book.');
         }
-        
+
         // Check if already enrolled
         if (auth()->user()->isEnrolledIn($book)) {
             return redirect()->back()->with('info', 'You are already enrolled in this book.');
         }
-        
+
         // Enroll the user
         auth()->user()->enrolledBooks()->attach($book->id);
-        
+
         return redirect()->back()->with('success', 'You have successfully enrolled in this book.');
     }
-    
+
     /**
      * Unenroll the user from a book.
      */
@@ -37,15 +37,10 @@ class BookEnrollmentController extends Controller
         if (!auth()->user()->isEnrolledIn($book)) {
             return redirect()->back()->with('info', 'You are not enrolled in this book.');
         }
-        
-        // Don't allow unenrolling from own books
-        if ($book->user_id === auth()->id()) {
-            return redirect()->back()->with('info', 'You cannot unenroll from your own book.');
-        }
-        
+
         // Unenroll the user
         auth()->user()->enrolledBooks()->detach($book->id);
-        
+
         return redirect()->back()->with('success', 'You have successfully unenrolled from this book.');
     }
 }
