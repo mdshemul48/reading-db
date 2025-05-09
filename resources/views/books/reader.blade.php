@@ -163,6 +163,30 @@
         </div>
     </div>
 
+    <!-- Highlight note popup -->
+    <div id="highlight-note-popup"
+        class="hidden fixed bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-w-sm">
+        <div class="p-3">
+            <div class="flex justify-between items-start mb-2">
+                <div class="font-medium" id="popup-text-content"></div>
+                <button id="close-note-popup" class="text-gray-400 hover:text-gray-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="popup-note-content" class="text-sm border-l-2 border-gray-300 pl-2 italic"></div>
+            <div class="mt-2 flex justify-end space-x-2">
+                <button id="popup-edit-note"
+                    class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">Edit</button>
+                <button id="popup-delete-note"
+                    class="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100">Delete</button>
+            </div>
+        </div>
+    </div>
+
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -195,6 +219,15 @@
                 const highlightedText = document.getElementById('highlighted-text');
                 const saveNoteBtn = document.getElementById('save-note');
                 const cancelNoteBtn = document.getElementById('cancel-note');
+
+                // Note popup elements
+                const notePopup = document.getElementById('highlight-note-popup');
+                const popupTextContent = document.getElementById('popup-text-content');
+                const popupNoteContent = document.getElementById('popup-note-content');
+                const closeNotePopupBtn = document.getElementById('close-note-popup');
+                const popupEditNoteBtn = document.getElementById('popup-edit-note');
+                const popupDeleteNoteBtn = document.getElementById('popup-delete-note');
+                let currentAnnotationId = null;
 
                 // Toggle annotation panel
                 toggleAnnotationsBtn.addEventListener('click', function() {
@@ -420,7 +453,32 @@
                                         div.style.mixBlendMode = 'multiply';
                                         div.style.opacity = '0.9';
                                         div.style.zIndex = '1';
-                                        div.style.pointerEvents = 'none';
+                                        div.style.pointerEvents = 'auto'; // Allow clicks on highlights
+                                        div.style.cursor = 'pointer'; // Show pointer cursor on hover
+
+                                        // Store annotation data as an attribute for easy access
+                                        div.setAttribute('data-annotation-text', annotation.text_content || '');
+                                        div.setAttribute('data-annotation-note', annotation.note || '');
+                                        div.setAttribute('data-annotation-color', annotation.color || '#ffff00');
+                                        div.setAttribute('data-annotation-page', annotation.page_number);
+
+                                        // Add click event to show note popup
+                                        div.addEventListener('click', function(e) {
+                                            e.stopPropagation(); // Prevent triggering PDF.js click handlers
+                                            const annotationId = this.getAttribute('data-annotation-id');
+                                            const annotationText = this.getAttribute('data-annotation-text');
+                                            const annotationNote = this.getAttribute('data-annotation-note');
+
+                                            // Send message to parent window to show popup
+                                            window.parent.postMessage({
+                                                type: 'showNotePopup',
+                                                id: annotationId,
+                                                text: annotationText,
+                                                note: annotationNote,
+                                                rect: this.getBoundingClientRect(),
+                                                pageRect: pageView.div.getBoundingClientRect()
+                                            }, '*');
+                                        });
 
                                         // Position - adjust based on text content to improve alignment
                                         // Find text nodes that contain this text and use their position if possible
@@ -545,6 +603,11 @@
                                 box-shadow: 0 0 5px rgba(0,0,0,0.3);
                                 border-radius: 2px;
                                 mix-blend-mode: multiply;
+                                transition: opacity 0.2s;
+                            }
+                            .pdf-annotation-highlight:hover {
+                                opacity: 0.7 !important;
+                                box-shadow: 0 0 8px rgba(0,0,0,0.5);
                             }
                         `;
                         frameWindow.document.head.appendChild(styleEl);
@@ -1294,6 +1357,79 @@
 
                 // Mark default color as selected
                 document.querySelector(`.color-option[data-color="#ffff00"]`).classList.add('ring-2', 'ring-blue-500');
+
+                // Add event listeners for the note popup
+                closeNotePopupBtn.addEventListener('click', function() {
+                    notePopup.classList.add('hidden');
+                });
+
+                popupEditNoteBtn.addEventListener('click', function() {
+                    // Find the annotation
+                    const annotation = allAnnotations.find(a => a.id == currentAnnotationId);
+                    if (annotation) {
+                        openNoteEditor(annotation);
+                        notePopup.classList.add('hidden');
+                    }
+                });
+
+                popupDeleteNoteBtn.addEventListener('click', function() {
+                    if (currentAnnotationId) {
+                        deleteAnnotation(currentAnnotationId);
+                        notePopup.classList.add('hidden');
+                    }
+                });
+
+                // Click outside to close popup
+                document.addEventListener('mousedown', function(e) {
+                    if (!notePopup.contains(e.target) && !e.target.closest('.pdf-annotation-highlight')) {
+                        notePopup.classList.add('hidden');
+                    }
+                });
+
+                // Listen for messages from the iframe
+                window.addEventListener('message', function(e) {
+                    if (e.source !== pdfViewer.contentWindow) return;
+
+                    const message = e.data;
+                    if (message && message.type === 'showNotePopup') {
+                        // Show the note popup
+                        const annotationId = message.id;
+                        const annotationText = message.text;
+                        const annotationNote = message.note;
+                        const rect = message.rect;
+                        const pageRect = message.pageRect;
+
+                        // Position popup near the highlight
+                        const viewerRect = pdfViewer.getBoundingClientRect();
+                        let left = viewerRect.left + rect.left;
+                        let top = viewerRect.top + rect.bottom + 10;
+
+                        // Make sure popup stays within viewport
+                        const popupWidth = 300; // Approximate width of popup
+                        if (left + popupWidth > window.innerWidth) {
+                            left = window.innerWidth - popupWidth - 20;
+                        }
+
+                        notePopup.style.left = left + 'px';
+                        notePopup.style.top = top + 'px';
+
+                        // Set content
+                        popupTextContent.textContent = annotationText;
+
+                        if (annotationNote && annotationNote.trim() !== '') {
+                            popupNoteContent.textContent = annotationNote;
+                            popupNoteContent.classList.remove('hidden');
+                        } else {
+                            popupNoteContent.classList.add('hidden');
+                        }
+
+                        // Store current annotation ID
+                        currentAnnotationId = annotationId;
+
+                        // Show popup
+                        notePopup.classList.remove('hidden');
+                    }
+                });
             });
         </script>
     @endpush
