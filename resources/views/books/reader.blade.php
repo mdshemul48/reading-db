@@ -142,6 +142,20 @@
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
             </button>
+            <button id="search-definition-btn" class="p-2 rounded hover:bg-gray-100" title="Search Definition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" />
+                </svg>
+            </button>
+            <button id="search-web-btn" class="p-2 rounded hover:bg-gray-100" title="Search on Google">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -210,6 +224,8 @@
                 const annotationTooltip = document.getElementById('annotation-tooltip');
                 const highlightBtn = document.getElementById('highlight-btn');
                 const noteBtn = document.getElementById('note-btn');
+                const searchDefinitionBtn = document.getElementById('search-definition-btn');
+                const searchWebBtn = document.getElementById('search-web-btn');
                 const colorOptions = document.querySelectorAll('.color-option');
                 let selectedHighlightColor = '#ffff00'; // Default color
 
@@ -856,7 +872,29 @@
                     }
                 }
 
-                // Inject text selection handler into PDF.js
+                // Hide tooltip when clicking outside
+                document.addEventListener('mousedown', function(e) {
+                    if (!annotationTooltip.contains(e.target) && !e.target.closest(
+                            '.pdf-annotation-highlight')) {
+                        annotationTooltip.classList.add('hidden');
+                    }
+                });
+
+                // Also hide tooltip when text selection is cleared
+                document.addEventListener('selectionchange', function() {
+                    const selection = window.getSelection();
+                    if (selection.toString().trim().length === 0 && !annotationTooltip.classList.contains(
+                            'hidden')) {
+                        // Small delay to allow buttons in tooltip to be clicked
+                        setTimeout(() => {
+                            if (!annotationTooltip.matches(':hover')) {
+                                annotationTooltip.classList.add('hidden');
+                            }
+                        }, 100);
+                    }
+                });
+
+                // Listen for selection changes in the PDF iframe
                 function injectTextSelectionHandler() {
                     try {
                         const frameWindow = pdfViewer.contentWindow;
@@ -882,6 +920,21 @@
                                             type: 'textSelection',
                                             selection: selection.toString(),
                                             rect: selection.getRangeAt(0).getBoundingClientRect()
+                                        }, '*');
+                                    } else {
+                                        // Selection was cleared, notify parent
+                                        window.parent.postMessage({
+                                            type: 'selectionCleared'
+                                        }, '*');
+                                    }
+                                });
+
+                                // Also listen for clicks that might clear selection
+                                document.addEventListener('mousedown', function(e) {
+                                    // Only consider clicks that are not on text
+                                    if (e.target.nodeName !== 'SPAN' && e.target.nodeName !== 'DIV' && !e.target.closest('.textLayer')) {
+                                        window.parent.postMessage({
+                                            type: 'selectionCleared'
                                         }, '*');
                                     }
                                 });
@@ -912,13 +965,47 @@
 
                         // Store selection
                         currentSelection = pdfViewer.contentWindow.getSelection();
-                    }
-                });
-
-                // Hide tooltip when clicking outside
-                document.addEventListener('mousedown', function(e) {
-                    if (!e.target.closest('#annotation-tooltip') && !e.target.closest('#note-editor')) {
+                    } else if (message && message.type === 'selectionCleared') {
+                        // Hide tooltip when selection is cleared in iframe
                         annotationTooltip.classList.add('hidden');
+                        currentSelection = null;
+                    } else if (message && message.type === 'showNotePopup') {
+                        // Show the note popup
+                        const annotationId = message.id;
+                        const annotationText = message.text;
+                        const annotationNote = message.note;
+                        const rect = message.rect;
+                        const pageRect = message.pageRect;
+
+                        // Position popup near the highlight
+                        const viewerRect = pdfViewer.getBoundingClientRect();
+                        let left = viewerRect.left + rect.left;
+                        let top = viewerRect.top + rect.bottom + 10;
+
+                        // Make sure popup stays within viewport
+                        const popupWidth = 300; // Approximate width of popup
+                        if (left + popupWidth > window.innerWidth) {
+                            left = window.innerWidth - popupWidth - 20;
+                        }
+
+                        notePopup.style.left = left + 'px';
+                        notePopup.style.top = top + 'px';
+
+                        // Set content
+                        popupTextContent.textContent = annotationText;
+
+                        if (annotationNote && annotationNote.trim() !== '') {
+                            popupNoteContent.textContent = annotationNote;
+                            popupNoteContent.classList.remove('hidden');
+                        } else {
+                            popupNoteContent.classList.add('hidden');
+                        }
+
+                        // Store current annotation ID
+                        currentAnnotationId = annotationId;
+
+                        // Show popup
+                        notePopup.classList.remove('hidden');
                     }
                 });
 
@@ -1386,49 +1473,38 @@
                     }
                 });
 
-                // Listen for messages from the iframe
-                window.addEventListener('message', function(e) {
-                    if (e.source !== pdfViewer.contentWindow) return;
+                // Add event listeners for search functionality
+                searchDefinitionBtn.addEventListener('click', function() {
+                    if (!currentSelection) return;
 
-                    const message = e.data;
-                    if (message && message.type === 'showNotePopup') {
-                        // Show the note popup
-                        const annotationId = message.id;
-                        const annotationText = message.text;
-                        const annotationNote = message.note;
-                        const rect = message.rect;
-                        const pageRect = message.pageRect;
+                    const selectedText = currentSelection.toString().trim();
+                    if (selectedText.length === 0) return;
 
-                        // Position popup near the highlight
-                        const viewerRect = pdfViewer.getBoundingClientRect();
-                        let left = viewerRect.left + rect.left;
-                        let top = viewerRect.top + rect.bottom + 10;
+                    // Create a Google Dictionary search URL
+                    const searchUrl =
+                        `https://www.google.com/search?q=define+${encodeURIComponent(selectedText)}`;
 
-                        // Make sure popup stays within viewport
-                        const popupWidth = 300; // Approximate width of popup
-                        if (left + popupWidth > window.innerWidth) {
-                            left = window.innerWidth - popupWidth - 20;
-                        }
+                    // Open in a new tab
+                    window.open(searchUrl, '_blank');
 
-                        notePopup.style.left = left + 'px';
-                        notePopup.style.top = top + 'px';
+                    // Hide tooltip
+                    annotationTooltip.classList.add('hidden');
+                });
 
-                        // Set content
-                        popupTextContent.textContent = annotationText;
+                searchWebBtn.addEventListener('click', function() {
+                    if (!currentSelection) return;
 
-                        if (annotationNote && annotationNote.trim() !== '') {
-                            popupNoteContent.textContent = annotationNote;
-                            popupNoteContent.classList.remove('hidden');
-                        } else {
-                            popupNoteContent.classList.add('hidden');
-                        }
+                    const selectedText = currentSelection.toString().trim();
+                    if (selectedText.length === 0) return;
 
-                        // Store current annotation ID
-                        currentAnnotationId = annotationId;
+                    // Create a regular Google search URL
+                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(selectedText)}`;
 
-                        // Show popup
-                        notePopup.classList.remove('hidden');
-                    }
+                    // Open in a new tab
+                    window.open(searchUrl, '_blank');
+
+                    // Hide tooltip
+                    annotationTooltip.classList.add('hidden');
                 });
             });
         </script>
