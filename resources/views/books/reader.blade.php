@@ -364,6 +364,10 @@
                                         const storedScale = positionData.scale || 1;
                                         const scaleFactor = currentScale / storedScale;
 
+                                        // Get text layer for better positioning
+                                        const textLayer = pageView.textLayer?.textLayerDiv || pageView.div.querySelector('.textLayer');
+                                        const canvasWrapper = pageView.div.querySelector('.canvasWrapper');
+
                                         // If we have extreme values, they might be in a different coordinate system
                                         // Adjust as needed
                                         if (positionData.top > pageView.div.clientHeight * 2) {
@@ -371,17 +375,16 @@
                                             const pageHeight = pageView.viewport.height;
                                             const pageWidth = pageView.viewport.width;
 
-                                            // Log the raw and scaled values to debug
                                             console.log("Large position values detected - attempting to normalize");
                                             console.log("Page dimensions:", { width: pageWidth, height: pageHeight });
                                             console.log("Current scale:", currentScale);
 
-                                            // Try to normalize the coordinates
+                                            // Try to normalize the coordinates - dividing by a larger factor since values are very large
                                             positionData = {
-                                                left: (positionData.left / 10) * currentScale,
-                                                top: (positionData.top / 10) * currentScale,
+                                                left: (positionData.left / 50) * currentScale,
+                                                top: (positionData.top / 50) * currentScale,
                                                 width: (positionData.width / 10) * currentScale,
-                                                height: (positionData.height / 10) * currentScale
+                                                height: (positionData.height / 3) * currentScale
                                             };
 
                                             console.log("Normalized position:", positionData);
@@ -403,35 +406,49 @@
                                         div.style.position = 'absolute';
                                         div.style.backgroundColor = highlightColor;
                                         div.style.mixBlendMode = 'multiply';
-                                        div.style.opacity = '0.5';
-                                        div.style.zIndex = '1000';
+                                        div.style.opacity = '0.9';
+                                        div.style.zIndex = '1';
                                         div.style.pointerEvents = 'none';
 
-                                        // Position
+                                        // Position - adjust based on text content to improve alignment
+                                        // Find text nodes that contain this text and use their position if possible
+                                        if (textLayer && annotation.text_content) {
+                                            const textNodes = Array.from(textLayer.querySelectorAll('.textLayer > span'));
+
+                                            for (const node of textNodes) {
+                                                if (node.textContent && node.textContent.includes(annotation.text_content.substring(0, 20))) {
+                                                    // Found text node that contains our highlight text
+                                                    const nodeRect = node.getBoundingClientRect();
+                                                    const layerRect = textLayer.getBoundingClientRect();
+
+                                                    // Use this position instead
+                                                    positionData = {
+                                                        left: node.offsetLeft,
+                                                        top: node.offsetTop,
+                                                        width: node.offsetWidth,
+                                                        height: node.offsetHeight
+                                                    };
+
+                                                    console.log("Using text node position for highlight:", positionData);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // Position the highlight
                                         div.style.left = positionData.left + 'px';
                                         div.style.top = positionData.top + 'px';
                                         div.style.width = positionData.width + 'px';
                                         div.style.height = positionData.height + 'px';
 
                                         // Add the highlight to the page
-                                        pageView.div.appendChild(div);
+                                        if (textLayer) {
+                                            textLayer.appendChild(div); // Add to text layer for better positioning
+                                        } else {
+                                            pageView.div.appendChild(div);
+                                        }
 
                                         console.log("Added highlight to page", annotation.page_number, div);
-
-                                        // Also try adding a visible debug rectangle
-                                        const debugDiv = document.createElement('div');
-                                        debugDiv.className = 'debug-highlight';
-                                        debugDiv.style.position = 'absolute';
-                                        debugDiv.style.border = '2px solid red';
-                                        debugDiv.style.backgroundColor = 'transparent';
-                                        debugDiv.style.zIndex = '1001';
-                                        debugDiv.style.pointerEvents = 'none';
-                                        debugDiv.style.left = positionData.left + 'px';
-                                        debugDiv.style.top = positionData.top + 'px';
-                                        debugDiv.style.width = positionData.width + 'px';
-                                        debugDiv.style.height = positionData.height + 'px';
-                                        pageView.div.appendChild(debugDiv);
-
                                         return div;
                                     } catch (e) {
                                         console.error("Error adding highlight:", e, annotation);
@@ -465,7 +482,7 @@
                                         }
 
                                         // Remove any existing highlights for this page
-                                        pageView.div.querySelectorAll('.pdf-annotation-highlight, .debug-highlight').forEach(el => el.remove());
+                                        pageView.div.querySelectorAll('.pdf-annotation-highlight').forEach(el => el.remove());
 
                                         // Add each annotation highlight
                                         annotationsByPage[pageNumber].forEach(annotation => {
@@ -490,7 +507,7 @@
                                     if (pageAnnotations.length === 0) return;
 
                                     // Remove existing highlights
-                                    pageView.div.querySelectorAll('.pdf-annotation-highlight, .debug-highlight').forEach(el => el.remove());
+                                    pageView.div.querySelectorAll('.pdf-annotation-highlight').forEach(el => el.remove());
 
                                     // Add highlights
                                     pageAnnotations.forEach(annotation => {
@@ -516,9 +533,6 @@
                                 box-shadow: 0 0 5px rgba(0,0,0,0.3);
                                 border-radius: 2px;
                                 mix-blend-mode: multiply;
-                            }
-                            .debug-highlight {
-                                box-shadow: 0 0 5px red;
                             }
                         `;
                         frameWindow.document.head.appendChild(styleEl);
@@ -683,6 +697,7 @@
                         // Get position data for highlighting
                         let positionData = {};
                         const range = currentSelection.getRangeAt(0);
+                        const rects = range.getClientRects();
                         const rect = range.getBoundingClientRect();
 
                         // Get the position relative to the PDF viewer
@@ -710,6 +725,16 @@
                             pageHeight: pageBounds.height,
                             scale: PDFViewerApplication.pdfViewer.currentScale || 1
                         };
+
+                        // Also store all client rects for multi-line selections
+                        if (rects.length > 1) {
+                            positionData.rects = Array.from(rects).map(r => ({
+                                left: r.left - pageBounds.left,
+                                top: r.top - pageBounds.top,
+                                width: r.width,
+                                height: r.height
+                            }));
+                        }
 
                         console.log("Creating annotation with position:", positionData);
                         console.log("Page bounds:", pageBounds);
