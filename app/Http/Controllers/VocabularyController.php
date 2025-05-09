@@ -21,13 +21,21 @@ class VocabularyController extends Controller
         $query = Vocabulary::where('user_id', $user->id)
             ->with('book');
 
+        // Log the query parameters
+        \Log::info('Vocabulary Query Parameters', [
+            'book_id' => $request->book_id,
+            'difficulty' => $request->difficulty,
+            'filled_book_id' => $request->filled('book_id'),
+            'filled_difficulty' => $request->filled('difficulty'),
+        ]);
+
         // Filter by book if requested
-        if ($request->has('book_id')) {
+        if ($request->filled('book_id')) {
             $query->where('book_id', $request->book_id);
         }
 
         // Filter by difficulty if requested
-        if ($request->has('difficulty')) {
+        if ($request->filled('difficulty')) {
             $query->where('difficulty', $request->difficulty);
         }
 
@@ -40,13 +48,37 @@ class VocabularyController extends Controller
             $sortField = 'created_at';
         }
 
+        // Convert query to SQL for debugging
+        $sqlQuery = $query->orderBy($sortField, $sortDirection)->toSql();
+        $sqlBindings = $query->getBindings();
+        \Log::info('Vocabulary SQL Query', [
+            'sql' => $sqlQuery,
+            'bindings' => $sqlBindings
+        ]);
+
+        // Check if there are any vocabulary items for this specific book
+        if ($request->filled('book_id')) {
+            $bookItemsCount = Vocabulary::where('user_id', $user->id)
+                ->where('book_id', $request->book_id)
+                ->count();
+            \Log::info('Book vocabulary count', [
+                'book_id' => $request->book_id,
+                'count' => $bookItemsCount
+            ]);
+        }
+
         $vocabulary = $query->orderBy($sortField, $sortDirection)
             ->paginate(20)
             ->withQueryString();
 
+        // Get both owned books and enrolled books
+        $ownedBooks = Book::where('user_id', $user->id)->get();
+        $enrolledBooks = $user->enrolledBooks()->get();
+        $books = $ownedBooks->merge($enrolledBooks)->unique('id');
+
         return view('vocabulary.index', [
             'vocabulary' => $vocabulary,
-            'books' => Book::where('user_id', $user->id)->get(),
+            'books' => $books,
         ]);
     }
 
@@ -83,13 +115,21 @@ class VocabularyController extends Controller
             $validated['book_id'] = $validated['book_id'] ?? null;
             $validated['page_number'] = $validated['page_number'] ?? null;
 
-            // Make sure the book belongs to the user if provided
+            // Make sure the book belongs to the user or the user is enrolled in the book
             if (!empty($validated['book_id'])) {
                 $book = Book::find($validated['book_id']);
-                if (!$book || $book->user_id !== $user->id) {
+                if (!$book) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Invalid book specified',
+                        'message' => 'Book not found',
+                    ], 404);
+                }
+
+                // Check if user owns the book or is enrolled in it
+                if ($book->user_id !== $user->id && !$user->isEnrolledIn($book)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You must own or be enrolled in this book to add vocabulary from it',
                     ], 403);
                 }
             }
@@ -165,13 +205,22 @@ class VocabularyController extends Controller
             'page_number' => 'nullable|integer|min:1',
         ]);
 
-        // Make sure the book belongs to the user if provided
+        // Make sure the book belongs to the user or the user is enrolled in the book
         if (!empty($validated['book_id'])) {
             $book = Book::find($validated['book_id']);
-            if (!$book || $book->user_id !== Auth::id()) {
+            if (!$book) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid book specified',
+                    'message' => 'Book not found',
+                ], 404);
+            }
+
+            $user = Auth::user();
+            // Check if user owns the book or is enrolled in it
+            if ($book->user_id !== $user->id && !$user->isEnrolledIn($book)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must own or be enrolled in this book to add vocabulary from it',
                 ], 403);
             }
         }
