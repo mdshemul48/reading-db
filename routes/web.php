@@ -5,6 +5,7 @@ use App\Http\Controllers\BookEnrollmentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BookReaderController;
+use App\Http\Controllers\PdfAnnotationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -37,6 +38,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/books/{book}/read', [BookReaderController::class, 'reader'])->name('books.reader');
     Route::post('/books/{book}/progress', [BookReaderController::class, 'updateProgress'])
         ->name('books.update-progress')
+        ->middleware('web');
+
+    // PDF Annotation routes
+    Route::get('/books/{book}/annotations', [PdfAnnotationController::class, 'getBookAnnotations'])
+        ->name('books.annotations')
+        ->middleware('web');
+    Route::post('/books/{book}/annotations', [PdfAnnotationController::class, 'store'])
+        ->name('books.annotations.store')
+        ->middleware('web');
+    Route::put('/annotations/{annotation}', [PdfAnnotationController::class, 'update'])
+        ->name('annotations.update')
+        ->middleware('web');
+    Route::delete('/annotations/{annotation}', [PdfAnnotationController::class, 'destroy'])
+        ->name('annotations.destroy')
         ->middleware('web');
 
     // Book enrollment routes
