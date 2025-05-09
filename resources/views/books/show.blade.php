@@ -108,7 +108,7 @@
                             </div>
                         </div>
 
-                        @if (!$isEnrolled && $book->user_id !== auth()->id())
+                        @if (!$isEnrolled && ($book->user_id !== auth()->id() || auth()->user()->isAdmin()))
                             <form action="{{ route('books.enroll', $book) }}" method="POST">
                                 @csrf
                                 <button type="submit"
@@ -117,14 +117,11 @@
                                 </button>
                             </form>
                         @elseif ($isEnrolled)
-                            <form action="{{ route('books.unenroll', $book) }}" method="POST">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                    Unenroll from this Book
-                                </button>
-                            </form>
+                            <button
+                                class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                                onclick="openUnenrollModal()">
+                                Unenroll from this Book
+                            </button>
                         @endif
                     </div>
 
@@ -148,15 +145,10 @@
                                 </a>
                             </div>
 
-                            <form action="{{ route('books.destroy', $book) }}" method="POST"
-                                onsubmit="return confirm('Are you sure you want to delete this book? This cannot be undone.')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                    Delete Book
-                                </button>
-                            </form>
+                            <button type="button" onclick="openDeleteModal()"
+                                class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                Delete Book
+                            </button>
                         </div>
                     @endif
                 </div>
@@ -164,3 +156,134 @@
         </div>
     </div>
 </x-app-layout>
+
+<!-- Unenroll Confirmation Modal -->
+<div id="unenrollModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Confirm Unenrollment</h3>
+        <p class="text-sm text-gray-600 mb-4">For security purposes, please enter your password to confirm that you want
+            to unenroll from <span class="font-medium">{{ $book->title }}</span>.</p>
+
+        <form action="{{ route('books.unenroll', $book) }}" method="POST">
+            @csrf
+            @method('DELETE')
+
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" name="password" id="password" required
+                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <div id="password-error" class="mt-1 text-sm text-red-600 hidden">Password is required</div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeUnenrollModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Confirm Unenrollment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openUnenrollModal() {
+        document.getElementById('unenrollModal').classList.remove('hidden');
+        document.getElementById('password').focus();
+    }
+
+    function closeUnenrollModal() {
+        document.getElementById('unenrollModal').classList.add('hidden');
+        document.getElementById('password').value = '';
+        document.getElementById('password-error').classList.add('hidden');
+    }
+
+    function openDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('hidden');
+        document.getElementById('delete-password').focus();
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+        document.getElementById('delete-password').value = '';
+        document.getElementById('delete-password-error').classList.add('hidden');
+    }
+
+    // Add form validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const unenrollForm = document.querySelector('#unenrollModal form');
+        const deleteForm = document.querySelector('#deleteModal form');
+
+        unenrollForm.addEventListener('submit', function(e) {
+            const passwordInput = document.getElementById('password');
+            const passwordError = document.getElementById('password-error');
+
+            if (!passwordInput.value.trim()) {
+                e.preventDefault();
+                passwordError.classList.remove('hidden');
+                passwordInput.focus();
+            }
+        });
+
+        deleteForm.addEventListener('submit', function(e) {
+            const passwordInput = document.getElementById('delete-password');
+            const passwordError = document.getElementById('delete-password-error');
+
+            if (!passwordInput.value.trim()) {
+                e.preventDefault();
+                passwordError.classList.remove('hidden');
+                passwordInput.focus();
+            }
+        });
+
+        // Hide errors when typing
+        document.getElementById('password').addEventListener('input', function() {
+            document.getElementById('password-error').classList.add('hidden');
+        });
+
+        document.getElementById('delete-password').addEventListener('input', function() {
+            document.getElementById('delete-password-error').classList.add('hidden');
+        });
+    });
+</script>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Confirm Book Deletion</h3>
+        <p class="text-sm text-gray-600 mb-4">
+            <span class="font-bold text-red-600">Warning:</span> This action cannot be undone. All data related to this
+            book will be permanently deleted.
+        </p>
+        <p class="text-sm text-gray-600 mb-4">
+            For security purposes, please enter your password to confirm that you want to delete
+            <span class="font-medium">{{ $book->title }}</span>.
+        </p>
+
+        <form action="{{ route('books.destroy', $book) }}" method="POST">
+            @csrf
+            @method('DELETE')
+
+            <div class="mb-4">
+                <label for="delete-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" name="password" id="delete-password" required
+                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <div id="delete-password-error" class="mt-1 text-sm text-red-600 hidden">Password is required</div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeDeleteModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Permanently Delete Book
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

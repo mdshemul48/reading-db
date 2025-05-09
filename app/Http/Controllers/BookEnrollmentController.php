@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class BookEnrollmentController extends Controller
 {
@@ -31,11 +32,21 @@ class BookEnrollmentController extends Controller
     /**
      * Unenroll the user from a book.
      */
-    public function unenroll(Book $book)
+    public function unenroll(Book $book, Request $request)
     {
         // Check if enrolled
         if (!auth()->user()->isEnrolledIn($book)) {
             return redirect()->back()->with('info', 'You are not enrolled in this book.');
+        }
+
+        // Validate the password
+        $request->validate([
+            'password' => 'required',
+        ]);
+
+        // Verify password
+        if (!Hash::check($request->password, auth()->user()->password)) {
+            return redirect()->back()->with('error', 'The password you entered is incorrect.');
         }
 
         // Unenroll the user

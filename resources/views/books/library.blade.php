@@ -60,13 +60,7 @@
                                                 <span
                                                     class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">Enrolled</span>
                                             @else
-                                                <form action="{{ route('books.enroll', $book) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-xs px-2 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 rounded">
-                                                        Enroll
-                                                    </button>
-                                                </form>
+                                                <div class="h-6"></div>
                                             @endif
                                             <div class="flex space-x-2">
                                                 <a href="{{ route('books.show', $book) }}"

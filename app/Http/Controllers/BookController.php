@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 
 class BookController extends Controller
 {
@@ -207,11 +208,21 @@ class BookController extends Controller
     /**
      * Remove the specified book from storage.
      */
-    public function destroy(Book $book)
+    public function destroy(Book $book, Request $request)
     {
         // Check if user owns this book
         if ($book->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
             abort(403, 'You cannot delete this book.');
+        }
+
+        // Validate the password
+        $request->validate([
+            'password' => 'required',
+        ]);
+
+        // Verify password
+        if (!Hash::check($request->password, auth()->user()->password)) {
+            return redirect()->back()->with('error', 'The password you entered is incorrect.');
         }
 
         // Check if other users are enrolled in this book

@@ -64,12 +64,6 @@
                                                     class="text-blue-600 hover:text-blue-800">View</a>
                                                 <a href="{{ route('books.edit', $book) }}"
                                                     class="text-emerald-600 hover:text-emerald-800">Edit</a>
-                                                <form action="{{ route('books.unenroll', $book) }}" method="POST"
-                                                    class="inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="text-red-600 hover:text-red-800">Unenroll</button>
                                                 </form>
                                             </div>
                                         </div>

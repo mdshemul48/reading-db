@@ -26,19 +26,14 @@ class BookReaderController extends Controller
             $enrollment = BookEnrollment::where('user_id', auth()->id())
                 ->where('book_id', $book->id)
                 ->first();
-        } else {
+        } else if ($book->user_id === auth()->id()) {
             // Auto-enroll the user if they own the book
-            if ($book->user_id === auth()->id()) {
-                $enrollment = BookEnrollment::firstOrCreate([
-                    'user_id' => auth()->id(),
-                    'book_id' => $book->id
-                ]);
-            } else {
-                // Redirect to book page if not enrolled
-                return redirect()->route('books.show', $book)
-                    ->with('error', 'You need to enroll in this book first.');
-            }
+            $enrollment = BookEnrollment::firstOrCreate([
+                'user_id' => auth()->id(),
+                'book_id' => $book->id
+            ]);
         }
+        // No enrollment needed for regular users - they can still read the book
 
         // Get the PDF file URL - ensure it's a full URL
         $pdfPath = $book->file_path;
@@ -67,16 +62,17 @@ class BookReaderController extends Controller
 
             // Check if user is enrolled
             if (!auth()->user()->isEnrolledIn($book)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You are not enrolled in this book.'
-                ], 403);
+                // Auto-enroll the user to track their progress
+                $enrollment = BookEnrollment::firstOrCreate([
+                    'user_id' => auth()->id(),
+                    'book_id' => $book->id
+                ]);
+            } else {
+                // Get existing enrollment record
+                $enrollment = BookEnrollment::where('user_id', auth()->id())
+                    ->where('book_id', $book->id)
+                    ->first();
             }
-
-            // Get enrollment record
-            $enrollment = BookEnrollment::where('user_id', auth()->id())
-                ->where('book_id', $book->id)
-                ->first();
 
             // Update progress
             $enrollment->updateProgress(
