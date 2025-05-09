@@ -1329,13 +1329,28 @@
                     // Handle page change events from PDF.js
                     if (message && message.type === 'pagechange') {
                         const currentPage = message.page;
-                        const totalPages = message.total || document.getElementById('total-pages').textContent;
+                        const totalPages = message.total || (document.getElementById('total-pages')
+                            ?.textContent || 0);
                         const scrollPosition = message.scrollPosition || null;
 
-                        // Update UI
-                        document.getElementById('current-page').textContent = currentPage;
-                        document.getElementById('total-pages').textContent = totalPages;
-                        updateProgress(currentPage, totalPages, scrollPosition);
+                        // Update UI with null checks
+                        const currentPageEl = document.getElementById('current-page');
+                        const totalPagesEl = document.getElementById('total-pages');
+                        const progressBarEl = document.getElementById('progress-bar');
+                        const progressPercentageEl = document.getElementById('progress-percentage');
+
+                        if (currentPageEl) {
+                            currentPageEl.textContent = currentPage;
+                        }
+
+                        if (totalPagesEl) {
+                            totalPagesEl.textContent = totalPages;
+                        }
+
+                        // Only call updateProgress if we have valid elements
+                        if (progressBarEl && progressPercentageEl) {
+                            updateProgress(currentPage, totalPages, scrollPosition);
+                        }
 
                         // Save progress
                         saveProgressDebounced(currentPage, totalPages, scrollPosition);
@@ -1565,8 +1580,16 @@
                     if (!totalPages || isNaN(totalPages)) return;
 
                     const progressPercentage = Math.round((currentPage / totalPages) * 100);
-                    document.getElementById('progress-percentage').textContent = progressPercentage;
-                    document.getElementById('progress-bar').style.width = progressPercentage + '%';
+                    const progressElement = document.getElementById('progress-percentage');
+                    const progressBarElement = document.getElementById('progress-bar');
+
+                    if (progressElement) {
+                        progressElement.textContent = progressPercentage;
+                    }
+
+                    if (progressBarElement) {
+                        progressBarElement.style.width = progressPercentage + '%';
+                    }
                 }
 
                 // Save progress to the server
@@ -1613,13 +1636,18 @@
 
                 // Save progress when user leaves the page
                 window.addEventListener('beforeunload', function() {
-                    const currentPage = parseInt(document.getElementById('current-page').textContent);
-                    const totalPages = parseInt(document.getElementById('total-pages').textContent);
+                    const currentPageEl = document.getElementById('current-page');
+                    const totalPagesEl = document.getElementById('total-pages');
 
-                    if (!isNaN(currentPage) && !isNaN(totalPages)) {
-                        // We'll send null for scroll position here because we don't have it
-                        // but that's ok because the latest scroll position would have been saved before
-                        saveProgress(currentPage, totalPages, null, true);
+                    if (currentPageEl && totalPagesEl) {
+                        const currentPage = parseInt(currentPageEl.textContent);
+                        const totalPages = parseInt(totalPagesEl.textContent);
+
+                        if (!isNaN(currentPage) && !isNaN(totalPages)) {
+                            // We'll send null for scroll position here because we don't have it
+                            // but that's ok because the latest scroll position would have been saved before
+                            saveProgress(currentPage, totalPages, null, true);
+                        }
                     }
                 });
 
