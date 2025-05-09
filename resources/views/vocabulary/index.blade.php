@@ -1,0 +1,314 @@
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('My Vocabulary') }}
+            </h2>
+            <div class="flex space-x-3">
+                <a href="{{ route('vocabulary.stats') }}"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">
+                    View Statistics
+                </a>
+                <a href="{{ route('vocabulary.flashcards') }}"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                    Practice Flashcards
+                </a>
+            </div>
+        </div>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <!-- Filter and Sort Controls -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <form action="{{ route('vocabulary.index') }}" method="GET"
+                        class="flex flex-wrap items-end gap-4">
+                        <!-- Book Filter -->
+                        <div>
+                            <label for="book_id" class="block text-sm font-medium text-gray-700 mb-1">Book</label>
+                            <select name="book_id" id="book_id"
+                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">All Books</option>
+                                @foreach ($books as $book)
+                                    <option value="{{ $book->id }}"
+                                        {{ request('book_id') == $book->id ? 'selected' : '' }}>
+                                        {{ $book->title }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Difficulty Filter -->
+                        <div>
+                            <label for="difficulty"
+                                class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
+                            <select name="difficulty" id="difficulty"
+                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">All Difficulties</option>
+                                <option value="easy" {{ request('difficulty') == 'easy' ? 'selected' : '' }}>Easy
+                                </option>
+                                <option value="medium" {{ request('difficulty') == 'medium' ? 'selected' : '' }}>Medium
+                                </option>
+                                <option value="hard" {{ request('difficulty') == 'hard' ? 'selected' : '' }}>Hard
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Sort By -->
+                        <div>
+                            <label for="sort" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                            <select name="sort" id="sort"
+                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="created_at"
+                                    {{ request('sort', 'created_at') == 'created_at' ? 'selected' : '' }}>Date Added
+                                </option>
+                                <option value="word" {{ request('sort') == 'word' ? 'selected' : '' }}>Word</option>
+                                <option value="next_review_at"
+                                    {{ request('sort') == 'next_review_at' ? 'selected' : '' }}>Next Review</option>
+                                <option value="last_reviewed_at"
+                                    {{ request('sort') == 'last_reviewed_at' ? 'selected' : '' }}>Last Reviewed
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Sort Direction -->
+                        <div>
+                            <label for="direction"
+                                class="block text-sm font-medium text-gray-700 mb-1">Direction</label>
+                            <select name="direction" id="direction"
+                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="desc" {{ request('direction', 'desc') == 'desc' ? 'selected' : '' }}>
+                                    Descending</option>
+                                <option value="asc" {{ request('direction') == 'asc' ? 'selected' : '' }}>Ascending
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Apply Filters Button -->
+                        <div>
+                            <button type="submit"
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">
+                                Apply Filters
+                            </button>
+                        </div>
+
+                        <!-- Clear Filters -->
+                        <div>
+                            <a href="{{ route('vocabulary.index') }}"
+                                class="text-gray-600 px-4 py-2 rounded-md text-sm font-medium hover:text-gray-900">
+                                Clear Filters
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Vocabulary List -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    @if ($vocabulary->isEmpty())
+                        <div class="text-center py-4">
+                            <p class="text-gray-500">You haven't added any vocabulary words yet.</p>
+                            <p class="text-gray-500 mt-2">While reading a book, select text and click the "Save to
+                                Vocabulary" button.</p>
+                        </div>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Word
+                                        </th>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Definition
+                                        </th>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Book & Context
+                                        </th>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Mastery
+                                        </th>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Next Review
+                                        </th>
+                                        <th scope="col"
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    @foreach ($vocabulary as $word)
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">{{ $word->word }}
+                                                </div>
+                                                <div class="text-xs text-gray-500">
+                                                    <span
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                        {{ $word->difficulty === 'easy'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : ($word->difficulty === 'medium'
+                                                                ? 'bg-yellow-100 text-yellow-800'
+                                                                : 'bg-red-100 text-red-800') }}">
+                                                        {{ ucfirst($word->difficulty) }}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900 max-w-md">
+                                                    {{ Str::limit($word->definition, 150) }}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900">
+                                                    @if ($word->book)
+                                                        <a href="{{ route('books.reader', $word->book) }}"
+                                                            class="text-blue-600 hover:text-blue-900">
+                                                            {{ $word->book->title }}
+                                                        </a>
+                                                        @if ($word->page_number)
+                                                            <span class="text-gray-500">(Page
+                                                                {{ $word->page_number }})</span>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-gray-500">No book</span>
+                                                    @endif
+                                                </div>
+                                                @if ($word->context)
+                                                    <div class="text-xs text-gray-500 mt-1 italic max-w-md">
+                                                        "{{ Str::limit($word->context, 100) }}"
+                                                    </div>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <div class="w-16 bg-gray-200 rounded-full h-2.5">
+                                                        <div class="bg-{{ $word->getMasteryColor() }} h-2.5 rounded-full"
+                                                            style="width: {{ $word->getMasteryPercentage() }}%"></div>
+                                                    </div>
+                                                    <span
+                                                        class="ml-2 text-xs text-gray-600">{{ $word->getMasteryPercentage() }}%</span>
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">{{ $word->getMasteryLevel() }}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">
+                                                    @if ($word->next_review_at)
+                                                        {{ $word->next_review_at->format('M d, Y') }}
+                                                        <div class="text-xs text-gray-500">
+                                                            {{ $word->next_review_at->diffForHumans() }}
+                                                        </div>
+                                                    @else
+                                                        <span class="text-gray-500">Not scheduled</span>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <a href="{{ route('vocabulary.show', $word) }}"
+                                                    class="text-indigo-600 hover:text-indigo-900 mr-2">View</a>
+                                                <button data-word-id="{{ $word->id }}"
+                                                    class="text-red-600 hover:text-red-900 delete-word">Delete</button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4">
+                            {{ $vocabulary->links() }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title"
+        role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div
+                            class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Delete Vocabulary Word
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Are you sure you want to delete this vocabulary word? This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <form id="delete-form" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Delete
+                        </button>
+                    </form>
+                    <button type="button" id="cancel-delete"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Delete Modal -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteModal = document.getElementById('delete-modal');
+            const deleteForm = document.getElementById('delete-form');
+            const cancelDelete = document.getElementById('cancel-delete');
+            const deleteButtons = document.querySelectorAll('.delete-word');
+
+            // Show modal when delete button is clicked
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const wordId = this.getAttribute('data-word-id');
+                    deleteForm.action = `{{ url('vocabulary') }}/${wordId}`;
+                    deleteModal.classList.remove('hidden');
+                });
+            });
+
+            // Hide modal when cancel button is clicked
+            cancelDelete.addEventListener('click', function() {
+                deleteModal.classList.add('hidden');
+            });
+
+            // Hide modal when clicking outside
+            deleteModal.addEventListener('click', function(e) {
+                if (e.target === deleteModal) {
+                    deleteModal.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</x-app-layout>

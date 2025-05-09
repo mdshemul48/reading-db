@@ -1,4 +1,7 @@
 <x-app-layout>
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Remove the default header to maximize space -->
     <x-slot name="header"></x-slot>
 
@@ -156,6 +159,142 @@
                         d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
             </button>
+            <button id="save-vocabulary-btn" class="p-2 rounded hover:bg-gray-100" title="Save to Vocabulary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+            </button>
+            <button id="dictionary-lookup-btn" class="p-2 rounded hover:bg-gray-100" title="Look Up in Dictionary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 6l9 4 9-4M3 10l9 4 9-4m-9-4v12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Dictionary Modal -->
+    <div id="dictionary-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2" id="dictionary-word">
+                                <!-- Word will be displayed here -->
+                            </h3>
+                            <div class="mt-2">
+                                <div id="dictionary-loading" class="text-center py-4">
+                                    <svg class="animate-spin h-6 w-6 mx-auto text-gray-500"
+                                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                            stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>
+                                    <p class="mt-2 text-sm text-gray-500">Loading definition...</p>
+                                </div>
+                                <div id="dictionary-content" class="overflow-y-auto max-h-96">
+                                    <!-- Dictionary content will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" id="save-to-vocabulary-btn"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Save to Vocabulary
+                    </button>
+                    <button type="button" id="close-dictionary-modal"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Vocabulary Modal -->
+    <div id="vocabulary-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">
+                                Save Word to Vocabulary
+                            </h3>
+                            <div class="mt-2">
+                                <div class="mb-4">
+                                    <label for="vocabulary-word"
+                                        class="block text-sm font-medium text-gray-700">Word</label>
+                                    <input type="text" name="vocabulary-word" id="vocabulary-word"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="vocabulary-definition"
+                                        class="block text-sm font-medium text-gray-700">Definition</label>
+                                    <textarea name="vocabulary-definition" id="vocabulary-definition" rows="3"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="vocabulary-context"
+                                        class="block text-sm font-medium text-gray-700">Context (from the book)</label>
+                                    <textarea name="vocabulary-context" id="vocabulary-context" rows="2"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="vocabulary-notes"
+                                        class="block text-sm font-medium text-gray-700">Personal Notes</label>
+                                    <textarea name="vocabulary-notes" id="vocabulary-notes" rows="2"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"></textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-gray-700">Difficulty Level</label>
+                                    <div class="mt-2 flex justify-between">
+                                        <label class="inline-flex items-center">
+                                            <input type="radio" class="form-radio" name="difficulty"
+                                                value="easy" checked>
+                                            <span class="ml-2 text-green-600">Easy</span>
+                                        </label>
+                                        <label class="inline-flex items-center">
+                                            <input type="radio" class="form-radio" name="difficulty"
+                                                value="medium">
+                                            <span class="ml-2 text-yellow-600">Medium</span>
+                                        </label>
+                                        <label class="inline-flex items-center">
+                                            <input type="radio" class="form-radio" name="difficulty"
+                                                value="hard">
+                                            <span class="ml-2 text-red-600">Hard</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" id="save-vocabulary"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Save
+                    </button>
+                    <button type="button" id="close-vocabulary-modal"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -209,9 +348,11 @@
                     {{ $enrollment && $enrollment->scroll_position !== null ? $enrollment->scroll_position : 'null' }};
                 const pdfViewer = document.getElementById('pdf-viewer');
                 let viewerLoaded = false;
-                let currentBookId = {{ $book->id }};
+                let currentBookId = {{ $book->id ?? 'null' }};
                 let currentSelection = null;
                 let allAnnotations = [];
+                let currentWord = "";
+                let currentDefinition = "";
 
                 // Annotation panel elements
                 const annotationPanel = document.getElementById('annotation-panel');
@@ -226,8 +367,27 @@
                 const noteBtn = document.getElementById('note-btn');
                 const searchDefinitionBtn = document.getElementById('search-definition-btn');
                 const searchWebBtn = document.getElementById('search-web-btn');
+                const saveVocabularyBtn = document.getElementById('save-vocabulary-btn');
+                const dictionaryLookupBtn = document.getElementById('dictionary-lookup-btn');
                 const colorOptions = document.querySelectorAll('.color-option');
                 let selectedHighlightColor = '#ffff00'; // Default color
+
+                // Dictionary modal elements
+                const dictionaryModal = document.getElementById('dictionary-modal');
+                const dictionaryWord = document.getElementById('dictionary-word');
+                const dictionaryLoading = document.getElementById('dictionary-loading');
+                const dictionaryContent = document.getElementById('dictionary-content');
+                const closeDictionaryModalBtn = document.getElementById('close-dictionary-modal');
+                const saveToVocabularyBtn = document.getElementById('save-to-vocabulary-btn');
+
+                // Vocabulary modal elements
+                const vocabularyModal = document.getElementById('vocabulary-modal');
+                const vocabularyWord = document.getElementById('vocabulary-word');
+                const vocabularyDefinition = document.getElementById('vocabulary-definition');
+                const vocabularyContext = document.getElementById('vocabulary-context');
+                const vocabularyNotes = document.getElementById('vocabulary-notes');
+                const saveVocabularyModalBtn = document.getElementById('save-vocabulary');
+                const closeVocabularyModalBtn = document.getElementById('close-vocabulary-modal');
 
                 // Note editor elements
                 const noteEditor = document.getElementById('note-editor');
@@ -1505,6 +1665,283 @@
 
                     // Hide tooltip
                     annotationTooltip.classList.add('hidden');
+                });
+
+                // Add event listeners for vocabulary functionality
+                saveVocabularyBtn.addEventListener('click', function() {
+                    if (!currentSelection) return;
+
+                    const selectedText = currentSelection.toString().trim();
+                    if (selectedText.length === 0) return;
+
+                    // Set the selected word in the vocabulary modal
+                    vocabularyWord.value = selectedText;
+
+                    // Try to get the surrounding context (sentence)
+                    try {
+                        const range = currentSelection.getRangeAt(0);
+                        const selectedNode = range.startContainer;
+
+                        // Get parent paragraph or closest text container
+                        let contextNode = selectedNode;
+                        if (selectedNode.nodeType === Node.TEXT_NODE) {
+                            contextNode = selectedNode.parentNode;
+                        }
+
+                        // Get text from parent for context
+                        let context = contextNode.textContent.trim();
+                        if (context.length > 200) {
+                            // Truncate long context, trying to keep the selected word in the middle
+                            const wordIndex = context.indexOf(selectedText);
+                            if (wordIndex >= 0) {
+                                const startPos = Math.max(0, wordIndex - 80);
+                                const endPos = Math.min(context.length, wordIndex + selectedText.length + 80);
+                                context = (startPos > 0 ? '...' : '') +
+                                    context.substring(startPos, endPos) +
+                                    (endPos < context.length ? '...' : '');
+                            } else {
+                                context = context.substring(0, 200) + '...';
+                            }
+                        }
+
+                        vocabularyContext.value = context;
+                    } catch (e) {
+                        console.error('Error getting context:', e);
+                        vocabularyContext.value = '';
+                    }
+
+                    // Show the vocabulary modal
+                    vocabularyModal.classList.remove('hidden');
+
+                    // Hide tooltip
+                    annotationTooltip.classList.add('hidden');
+                });
+
+                dictionaryLookupBtn.addEventListener('click', function() {
+                    if (!currentSelection) return;
+
+                    const selectedText = currentSelection.toString().trim();
+                    if (selectedText.length === 0) return;
+
+                    // Set the word in the dictionary modal
+                    dictionaryWord.textContent = selectedText;
+                    currentWord = selectedText;
+
+                    // Show loading state
+                    dictionaryLoading.classList.remove('hidden');
+                    dictionaryContent.innerHTML = '';
+
+                    // Show the dictionary modal
+                    dictionaryModal.classList.remove('hidden');
+
+                    // Hide tooltip
+                    annotationTooltip.classList.add('hidden');
+
+                    // Fetch definition from an API (Free Dictionary API)
+                    fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(selectedText)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Word not found in dictionary');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Process and display dictionary data
+                            dictionaryLoading.classList.add('hidden');
+
+                            let html = '';
+                            if (data && data.length > 0) {
+                                const entry = data[0];
+
+                                // Phonetics
+                                if (entry.phonetics && entry.phonetics.length > 0) {
+                                    const phonetic = entry.phonetics.find(p => p.text) || entry.phonetics[
+                                        0];
+                                    if (phonetic) {
+                                        html +=
+                                            `<div class="text-gray-600 mb-3">${phonetic.text || ''}</div>`;
+                                        if (phonetic.audio) {
+                                            html += `<div class="mb-3">
+                                                <audio controls src="${phonetic.audio}" class="w-full h-8">
+                                                    Your browser does not support the audio element.
+                                                </audio>
+                                            </div>`;
+                                        }
+                                    }
+                                }
+
+                                // Meanings
+                                if (entry.meanings && entry.meanings.length > 0) {
+                                    entry.meanings.forEach(meaning => {
+                                        html += `<div class="mb-4">
+                                            <h4 class="font-semibold text-gray-800">${meaning.partOfSpeech}</h4>
+                                            <ul class="list-disc pl-5 mt-2">`;
+
+                                        // Definitions
+                                        if (meaning.definitions && meaning.definitions.length > 0) {
+                                            meaning.definitions.forEach(def => {
+                                                html += `<li class="mb-2">
+                                                    <p>${def.definition}</p>`;
+
+                                                // Example
+                                                if (def.example) {
+                                                    html +=
+                                                        `<p class="text-gray-600 italic mt-1">"${def.example}"</p>`;
+                                                }
+
+                                                html += `</li>`;
+                                            });
+                                        }
+
+                                        html += `</ul>`;
+
+                                        // Synonyms
+                                        if (meaning.synonyms && meaning.synonyms.length > 0) {
+                                            html += `<div class="mt-2">
+                                                <span class="font-medium">Synonyms: </span>
+                                                <span>${meaning.synonyms.join(', ')}</span>
+                                            </div>`;
+                                        }
+
+                                        // Antonyms
+                                        if (meaning.antonyms && meaning.antonyms.length > 0) {
+                                            html += `<div class="mt-1">
+                                                <span class="font-medium">Antonyms: </span>
+                                                <span>${meaning.antonyms.join(', ')}</span>
+                                            </div>`;
+                                        }
+
+                                        html += `</div>`;
+                                    });
+                                }
+
+                                // Store definition for vocabulary
+                                currentDefinition = entry.meanings
+                                    .map(m => `(${m.partOfSpeech}) ` +
+                                        m.definitions.slice(0, 1).map(d => d.definition).join('; '))
+                                    .join(' ');
+                            } else {
+                                html = '<p class="text-gray-600">No definition found.</p>';
+                                currentDefinition = '';
+                            }
+
+                            dictionaryContent.innerHTML = html;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching definition:', error);
+                            dictionaryLoading.classList.add('hidden');
+                            dictionaryContent.innerHTML = `
+                                <div class="text-gray-600">
+                                    <p>Sorry, we couldn't find a definition for "${selectedText}".</p>
+                                    <p class="mt-2">You can still save this word to your vocabulary with your own definition.</p>
+                                </div>
+                            `;
+                            currentDefinition = '';
+                        });
+                });
+
+                // Dictionary modal close button
+                closeDictionaryModalBtn.addEventListener('click', function() {
+                    dictionaryModal.classList.add('hidden');
+                });
+
+                // Save to vocabulary from dictionary
+                saveToVocabularyBtn.addEventListener('click', function() {
+                    // Set values in vocabulary modal
+                    vocabularyWord.value = currentWord;
+                    vocabularyDefinition.value = currentDefinition;
+
+                    // Hide dictionary modal and show vocabulary modal
+                    dictionaryModal.classList.add('hidden');
+                    vocabularyModal.classList.remove('hidden');
+                });
+
+                // Vocabulary modal close button
+                closeVocabularyModalBtn.addEventListener('click', function() {
+                    vocabularyModal.classList.add('hidden');
+                });
+
+                // Save vocabulary
+                saveVocabularyModalBtn.addEventListener('click', function() {
+                    // Ensure book_id is a number or null
+                    const bookId = currentBookId ? parseInt(currentBookId) : null;
+
+                    // Get selected difficulty, default to medium if none selected
+                    const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked')
+                        ?.value || 'medium';
+
+                    const wordData = {
+                        word: vocabularyWord.value.trim(),
+                        definition: vocabularyDefinition.value.trim() || null,
+                        context: vocabularyContext.value.trim() || null,
+                        notes: vocabularyNotes.value.trim() || null,
+                        difficulty: selectedDifficulty,
+                        book_id: bookId,
+                        page_number: pdfViewer.contentWindow.PDFViewerApplication?.page || 1
+                    };
+
+                    if (!wordData.word) {
+                        alert('Please enter a word.');
+                        return;
+                    }
+
+                    // Get CSRF token from meta tag
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                        'content') || '{{ csrf_token() }}';
+
+                    // Save to database via AJAX
+                    fetch('{{ route('vocabulary.store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            body: JSON.stringify(wordData)
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                if (response.headers.get('content-type')?.includes('text/html')) {
+                                    // This suggests we got a Laravel error page instead of JSON
+                                    console.error(
+                                        'Received HTML error response - CSRF token might be invalid');
+                                    throw new Error('Server error - received HTML response');
+                                }
+                                return response.text().then(text => {
+                                    try {
+                                        // Try to parse as JSON
+                                        return JSON.parse(text);
+                                    } catch (e) {
+                                        // Not valid JSON, log it and throw error
+                                        console.error('Invalid JSON in response:', text);
+                                        throw new Error('Invalid server response');
+                                    }
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Success
+                                vocabularyModal.classList.add('hidden');
+
+                                // Clear form
+                                vocabularyWord.value = '';
+                                vocabularyDefinition.value = '';
+                                vocabularyContext.value = '';
+                                vocabularyNotes.value = '';
+                                document.querySelector('input[name="difficulty"][value="easy"]').checked =
+                                    true;
+
+                                // Show success message
+                                alert('Word saved to vocabulary successfully!');
+                            } else {
+                                throw new Error(data.message || 'Error saving word');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error saving vocabulary:', error);
+                            alert('Error saving word: ' + error.message);
+                        });
                 });
             });
         </script>

@@ -7,6 +7,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BookReaderController;
 use App\Http\Controllers\PdfAnnotationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\VocabularyController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -57,6 +58,18 @@ Route::middleware('auth')->group(function () {
     // Book enrollment routes
     Route::post('/books/{book}/enroll', [BookEnrollmentController::class, 'enroll'])->name('books.enroll');
     Route::delete('/books/{book}/unenroll', [BookEnrollmentController::class, 'unenroll'])->name('books.unenroll');
+
+    // Vocabulary routes
+    Route::middleware('web')->group(function () {
+        Route::get('/vocabulary', [VocabularyController::class, 'index'])->name('vocabulary.index');
+        Route::post('/vocabulary', [VocabularyController::class, 'store'])->name('vocabulary.store');
+        Route::get('/vocabulary/{vocabulary}', [VocabularyController::class, 'show'])->name('vocabulary.show');
+        Route::put('/vocabulary/{vocabulary}', [VocabularyController::class, 'update'])->name('vocabulary.update');
+        Route::delete('/vocabulary/{vocabulary}', [VocabularyController::class, 'destroy'])->name('vocabulary.destroy');
+        Route::post('/vocabulary/{vocabulary}/review', [VocabularyController::class, 'review'])->name('vocabulary.review');
+        Route::get('/flashcards', [VocabularyController::class, 'flashcards'])->name('vocabulary.flashcards');
+        Route::get('/vocabulary-stats', [VocabularyController::class, 'stats'])->name('vocabulary.stats');
+    });
 });
 
 require __DIR__.'/auth.php';
