@@ -78,9 +78,9 @@
                 $initialScrollPosition =
                     $enrollment && $enrollment->scroll_position !== null ? $enrollment->scroll_position : null;
             @endphp
-            <iframe id="pdf-viewer"
-                src="{{ asset('pdfjs/web/viewer.html') }}?file={{ urlencode($pdfUrl) }}#page={{ $initialPage }}"
-                width="100%" height="100%" frameborder="0"></iframe>
+            <iframe id="pdf-viewer" data-initial-page="{{ $initialPage }}"
+                src="{{ asset('pdfjs/web/viewer.html') }}?file={{ urlencode($pdfUrl) }}" width="100%" height="100%"
+                frameborder="0"></iframe>
         </div>
     </div>
 
@@ -1378,6 +1378,7 @@
                     // Retry mechanism to ensure PDF.js is properly loaded and page is set
                     let attempts = 0;
                     const maxAttempts = 10;
+                    const initialPage = parseInt(pdfViewer.getAttribute('data-initial-page')) || 1;
 
                     function attemptSetPage() {
                         if (attempts >= maxAttempts) {
@@ -1400,6 +1401,7 @@
                             }
 
                             const PDFViewerApplication = frameWindow.PDFViewerApplication;
+                            console.log('Setting initial page to:', initialPage);
 
                             // Apply custom styling to PDF.js viewer to optimize reading experience
                             try {
@@ -1429,7 +1431,10 @@
                                 (function() {
                                     const PDFViewerApplication = window.PDFViewerApplication;
                                     const initialScrollPosition = ${initialScrollPosition};
+                                    const exactInitialPage = ${initialPage}; // Explicitly use our initial page
                                     let isFirstPageLoad = true;
+
+                                    console.log('PDF.js script injected, setting page to:', exactInitialPage);
 
                                     // Function to get current scroll position as percentage (0-1)
                                     function getCurrentScrollPosition() {
@@ -1450,6 +1455,22 @@
                                         position = Math.max(0, Math.min(1, position));
 
                                         return position;
+                                    }
+
+                                    // Function to explicitly set the page
+                                    function forcePageChange(pageNum) {
+                                        if (!pageNum || pageNum < 1) pageNum = 1;
+
+                                        console.log('Forcing page change to:', pageNum);
+                                        if (PDFViewerApplication.pdfViewer) {
+                                            // Use goToPage if available (newer versions of PDF.js)
+                                            if (typeof PDFViewerApplication.pdfViewer.goToPage === 'function') {
+                                                PDFViewerApplication.pdfViewer.goToPage(pageNum);
+                                            } else {
+                                                // Fallback to setting page property
+                                                PDFViewerApplication.page = pageNum;
+                                            }
+                                        }
                                     }
 
                                     // Add page change event listener
@@ -1480,22 +1501,27 @@
                                         }, 200);
                                     });
 
-                                    // Set initial page and scroll position after document is fully loaded
+                                    // Force page change after document is loaded
                                     if (!PDFViewerApplication.pdfDocument) {
                                         PDFViewerApplication.eventBus.on('documentloaded', function() {
-                                            // Force the page change event to trigger
-                                            window.parent.postMessage({
-                                                type: 'pagechange',
-                                                page: PDFViewerApplication.page,
-                                                total: PDFViewerApplication.pagesCount,
-                                                scrollPosition: 0
-                                            }, '*');
+                                            // Force page change to our stored page
+                                            setTimeout(() => {
+                                                forcePageChange(exactInitialPage);
+
+                                                // Force the page change event to trigger
+                                                window.parent.postMessage({
+                                                    type: 'pagechange',
+                                                    page: exactInitialPage,
+                                                    total: PDFViewerApplication.pagesCount,
+                                                    scrollPosition: 0
+                                                }, '*');
+                                            }, 100);
 
                                             // Set initial scroll position after page is rendered
                                             if (initialScrollPosition !== null) {
                                                 setTimeout(() => {
-                                                    if (PDFViewerApplication.page === ${initialPage}) {
-                                                        const pageView = PDFViewerApplication.pdfViewer._pages[PDFViewerApplication.page - 1];
+                                                    if (PDFViewerApplication.page === exactInitialPage) {
+                                                        const pageView = PDFViewerApplication.pdfViewer._pages[exactInitialPage - 1];
                                                         if (pageView) {
                                                             const pageHeight = pageView.viewport.height;
                                                             const pageTop = pageView.div.offsetTop - PDFViewerApplication.pdfViewer.container.offsetTop;
@@ -1507,14 +1533,35 @@
                                             }
                                         });
 
+                                        // Handle page rendered event for setting scroll position
+                                        PDFViewerApplication.eventBus.on('pagerendered', function(evt) {
+                                            if (isFirstPageLoad && evt.pageNumber === exactInitialPage && initialScrollPosition !== null) {
+                                                isFirstPageLoad = false;
+                                                setTimeout(() => {
+                                                    const pageView = PDFViewerApplication.pdfViewer._pages[exactInitialPage - 1];
+                                                    if (pageView) {
+                                                        const pageHeight = pageView.viewport.height;
+                                                        const pageTop = pageView.div.offsetTop - PDFViewerApplication.pdfViewer.container.offsetTop;
+                                                        const scrollTo = pageTop + (pageHeight * initialScrollPosition);
+                                                        PDFViewerApplication.pdfViewer.container.scrollTop = scrollTo;
+                                                    }
+                                                }, 100);
+                                            }
+                                        });
+
                                         // Add handler for when pages are rendered
                                         PDFViewerApplication.eventBus.on('pagesloaded', function() {
+                                            // Force page change to our stored page
+                                            setTimeout(() => {
+                                                forcePageChange(exactInitialPage);
+                                            }, 100);
+
                                             if (isFirstPageLoad && initialScrollPosition !== null) {
                                                 isFirstPageLoad = false;
 
                                                 setTimeout(() => {
-                                                    if (PDFViewerApplication.page === ${initialPage}) {
-                                                        const pageView = PDFViewerApplication.pdfViewer._pages[PDFViewerApplication.page - 1];
+                                                    if (PDFViewerApplication.page === exactInitialPage) {
+                                                        const pageView = PDFViewerApplication.pdfViewer._pages[exactInitialPage - 1];
                                                         if (pageView) {
                                                             const pageHeight = pageView.viewport.height;
                                                             const pageTop = pageView.div.offsetTop - PDFViewerApplication.pdfViewer.container.offsetTop;
@@ -1526,18 +1573,23 @@
                                             }
                                         });
                                     } else {
-                                        // Document already loaded, force event
-                                        window.parent.postMessage({
-                                            type: 'pagechange',
-                                            page: PDFViewerApplication.page,
-                                            total: PDFViewerApplication.pagesCount,
-                                            scrollPosition: getCurrentScrollPosition()
-                                        }, '*');
+                                        // Document already loaded, force page change
+                                        setTimeout(() => {
+                                            forcePageChange(exactInitialPage);
+
+                                            // Force the page change event
+                                            window.parent.postMessage({
+                                                type: 'pagechange',
+                                                page: exactInitialPage,
+                                                total: PDFViewerApplication.pagesCount,
+                                                scrollPosition: getCurrentScrollPosition()
+                                            }, '*');
+                                        }, 100);
 
                                         // Set initial scroll position
-                                        if (initialScrollPosition !== null && PDFViewerApplication.page === ${initialPage}) {
+                                        if (initialScrollPosition !== null) {
                                             setTimeout(() => {
-                                                const pageView = PDFViewerApplication.pdfViewer._pages[PDFViewerApplication.page - 1];
+                                                const pageView = PDFViewerApplication.pdfViewer._pages[exactInitialPage - 1];
                                                 if (pageView) {
                                                     const pageHeight = pageView.viewport.height;
                                                     const pageTop = pageView.div.offsetTop - PDFViewerApplication.pdfViewer.container.offsetTop;
@@ -1562,6 +1614,53 @@
 
                     // Start the attempt process
                     setTimeout(attemptSetPage, 500);
+                }
+
+                // Variables for tracking reading time
+                let readingStartTime = new Date();
+                let readingDuration = 0;
+                let isReading = true;
+                let idleTimer = null;
+                const IDLE_TIMEOUT = 60000; // 1 minute of inactivity is considered idle
+
+                // Track user activity to determine if they're actively reading
+                function resetIdleTimer() {
+                    clearTimeout(idleTimer);
+                    if (!isReading) {
+                        // User returned from being idle, restart the timer
+                        readingStartTime = new Date();
+                        isReading = true;
+                    }
+
+                    // Set new idle timer
+                    idleTimer = setTimeout(() => {
+                        // User is idle, calculate duration up to this point
+                        const now = new Date();
+                        readingDuration += (now - readingStartTime) / 60000; // convert to minutes
+                        isReading = false;
+                    }, IDLE_TIMEOUT);
+                }
+
+                // Set up activity tracking
+                ['mousemove', 'keydown', 'click', 'scroll'].forEach(eventType => {
+                    document.addEventListener(eventType, resetIdleTimer);
+                });
+
+                // Initialize idle timer
+                resetIdleTimer();
+
+                // Calculate reading duration
+                function calculateReadingDuration() {
+                    let duration = readingDuration;
+
+                    // If currently reading, add current session
+                    if (isReading) {
+                        const now = new Date();
+                        duration += (now - readingStartTime) / 60000; // convert to minutes
+                    }
+
+                    // Round to nearest minute, minimum 1 minute
+                    return Math.max(1, Math.round(duration));
                 }
 
                 // Debounce function for saving progress
@@ -1594,6 +1693,15 @@
 
                 // Save progress to the server
                 function saveProgress(currentPage, totalPages, scrollPosition, isSynchronous = false) {
+                    // Calculate reading duration
+                    const durationMinutes = calculateReadingDuration();
+
+                    // After calculating duration, reset tracking
+                    if (durationMinutes > 0) {
+                        readingDuration = 0;
+                        readingStartTime = new Date();
+                    }
+
                     const requestData = {
                         method: 'POST',
                         headers: {
@@ -1604,6 +1712,7 @@
                             current_page: currentPage,
                             total_pages: totalPages,
                             scroll_position: scrollPosition,
+                            duration_minutes: durationMinutes,
                             last_read_at: new Date().toISOString()
                         })
                     };
@@ -1614,6 +1723,7 @@
                             current_page: currentPage,
                             total_pages: totalPages,
                             scroll_position: scrollPosition,
+                            duration_minutes: durationMinutes,
                             last_read_at: new Date().toISOString()
                         })], {
                             type: 'application/json'

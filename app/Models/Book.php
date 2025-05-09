@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Book extends Model
 {
@@ -51,6 +52,14 @@ class Book extends Model
         return $this->belongsToMany(User::class, 'book_enrollments')
             ->withPivot(['current_page', 'total_pages', 'last_read_at'])
             ->withTimestamps();
+    }
+
+    /**
+     * Get the reading sessions for this book
+     */
+    public function readingSessions(): HasMany
+    {
+        return $this->hasMany(ReadingSession::class);
     }
 
     /**

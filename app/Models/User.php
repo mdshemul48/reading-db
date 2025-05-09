@@ -84,6 +84,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the reading sessions for this user
+     */
+    public function readingSessions(): HasMany
+    {
+        return $this->hasMany(ReadingSession::class);
+    }
+
+    /**
      * Check if user is enrolled in a specific book
      */
     public function isEnrolledIn(Book $book): bool

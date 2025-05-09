@@ -26,12 +26,30 @@ class BookReaderController extends Controller
             $enrollment = BookEnrollment::where('user_id', auth()->id())
                 ->where('book_id', $book->id)
                 ->first();
+
+            // Ensure there's a valid current_page
+            if (!$enrollment->current_page || $enrollment->current_page < 1) {
+                $enrollment->current_page = 1;
+                $enrollment->save();
+            }
+
+            // Ensure we don't exceed total pages if we have that information
+            if ($enrollment->total_pages && $enrollment->current_page > $enrollment->total_pages) {
+                $enrollment->current_page = $enrollment->total_pages;
+                $enrollment->save();
+            }
         } else if ($book->user_id === auth()->id()) {
             // Auto-enroll the user if they own the book
             $enrollment = BookEnrollment::firstOrCreate([
                 'user_id' => auth()->id(),
                 'book_id' => $book->id
             ]);
+
+            // Set initial page to 1 if not set
+            if (!$enrollment->current_page) {
+                $enrollment->current_page = 1;
+                $enrollment->save();
+            }
         }
         // No enrollment needed for regular users - they can still read the book
 
@@ -58,6 +76,7 @@ class BookReaderController extends Controller
                 'current_page' => 'required|integer|min:1',
                 'total_pages' => 'required|integer|min:1',
                 'scroll_position' => 'nullable|numeric|min:0|max:1',
+                'duration_minutes' => 'nullable|integer|min:0',
             ]);
 
             // Check if user is enrolled
@@ -78,7 +97,8 @@ class BookReaderController extends Controller
             $enrollment->updateProgress(
                 $validated['current_page'],
                 $validated['total_pages'],
-                $request->has('scroll_position') ? $validated['scroll_position'] : null
+                $request->has('scroll_position') ? $validated['scroll_position'] : null,
+                $request->has('duration_minutes') ? $validated['duration_minutes'] : null
             );
 
             return response()->json([
