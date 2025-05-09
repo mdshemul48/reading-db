@@ -19,6 +19,13 @@
                             <x-input-error :messages="$errors->get('title')" class="mt-2" />
                         </div>
 
+                        <!-- Author -->
+                        <div class="mt-4">
+                            <x-input-label for="author" :value="__('Author')" />
+                            <x-text-input id="author" class="block mt-1 w-full" type="text" name="author" :value="old('author')" />
+                            <x-input-error :messages="$errors->get('author')" class="mt-2" />
+                        </div>
+
                         <!-- Description -->
                         <div class="mt-4">
                             <x-input-label for="description" :value="__('Description (optional)')" />
@@ -45,7 +52,7 @@
                         <div class="mt-4">
                             <div class="flex items-start">
                                 <div class="flex items-center h-5">
-                                    <input id="is_private" name="is_private" type="checkbox" class="w-4 h-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500" {{ old('is_private') ? 'checked' : '' }}>
+                                    <input id="is_private" name="is_private" type="checkbox" value="1" class="w-4 h-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500" {{ old('is_private') ? 'checked' : '' }}>
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="is_private" class="font-medium text-gray-700">Private book</label>

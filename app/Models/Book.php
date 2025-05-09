@@ -19,6 +19,7 @@ class Book extends Model
     protected $fillable = [
         'title',
         'description',
+        'author',
         'file_path',
         'thumbnail_path',
         'is_private',

@@ -33,21 +33,35 @@
             
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6">
-                    <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <h1 class="text-2xl font-bold mb-2">{{ $book->title }}</h1>
-                            <p class="text-gray-600">Uploaded by {{ $book->user->name }} {{ $book->created_at->diffForHumans() }}</p>
-                            
-                            <div class="mt-2 flex items-center space-x-4">
-                                <span class="px-2 py-1 text-xs rounded {{ $book->is_private ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' }}">
-                                    {{ $book->is_private ? 'Private' : 'Public' }}
-                                </span>
+                    <div class="flex flex-col md:flex-row justify-between items-start mb-6">
+                        <div class="flex flex-col md:flex-row mb-4 md:mb-0">
+                            <div class="mr-0 md:mr-6 mb-4 md:mb-0 flex-shrink-0">
+                                <div class="h-48 w-36 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                                    @if ($book->thumbnail_path)
+                                        <img src="{{ Storage::url($book->thumbnail_path) }}" alt="{{ $book->title }}" class="w-full h-full object-cover">
+                                    @else
+                                        <svg class="w-20 h-20 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path>
+                                        </svg>
+                                    @endif
+                                </div>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold mb-2">{{ $book->title }}</h1>
+                                <p class="text-gray-600 mb-1">{{ $book->author ? 'By ' . $book->author : '' }}</p>
+                                <p class="text-gray-600">Uploaded by {{ $book->user->name }} {{ $book->created_at->diffForHumans() }}</p>
                                 
-                                @if ($isEnrolled)
-                                    <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
-                                        Enrolled
+                                <div class="mt-2 flex items-center space-x-4">
+                                    <span class="px-2 py-1 text-xs rounded {{ $book->is_private ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' }}">
+                                        {{ $book->is_private ? 'Private' : 'Public' }}
                                     </span>
-                                @endif
+                                    
+                                    @if ($isEnrolled)
+                                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
+                                            Enrolled
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                         

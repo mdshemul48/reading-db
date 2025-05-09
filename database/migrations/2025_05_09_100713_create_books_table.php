@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description')->nullable();
+            $table->string('author')->nullable();
             $table->string('file_path');
             $table->boolean('is_private')->default(false);
             $table->foreignId('user_id')->constrained()->onDelete('cascade');

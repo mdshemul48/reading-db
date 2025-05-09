@@ -61,6 +61,7 @@ class BookController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
+            'author' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'pdf_file' => 'required|file|mimes:pdf|max:204800',
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480',
@@ -79,10 +80,11 @@ class BookController extends Controller
         // Create book
         $book = Book::create([
             'title' => $request->title,
+            'author' => $request->author,
             'description' => $request->description,
             'file_path' => $pdfPath,
             'thumbnail_path' => $thumbnailPath,
-            'is_private' => $request->has('is_private'),
+            'is_private' => (bool) $request->input('is_private', false),
             'user_id' => auth()->id(),
         ]);
         
@@ -146,6 +148,7 @@ class BookController extends Controller
         
         $request->validate([
             'title' => 'required|string|max:255',
+            'author' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'pdf_file' => 'nullable|file|mimes:pdf|max:204800',
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:20480',
@@ -154,8 +157,9 @@ class BookController extends Controller
         
         $data = [
             'title' => $request->title,
+            'author' => $request->author,
             'description' => $request->description,
-            'is_private' => $request->has('is_private'),
+            'is_private' => (bool) $request->input('is_private', false),
         ];
         
         // Handle PDF file upload if new file provided
