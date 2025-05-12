@@ -153,4 +153,29 @@ class PdfAnnotationController extends Controller
             'message' => 'Annotation deleted successfully'
         ]);
     }
+
+    /**
+     * Get all notes for the current user
+     */
+    public function getAllNotes(): JsonResponse
+    {
+        $notes = PdfAnnotation::where('user_id', auth()->id())
+            ->whereNotNull('note')
+            ->with('book')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'notes' => $notes
+        ]);
+    }
+
+    /**
+     * Display the notes management page
+     */
+    public function notesManagement()
+    {
+        return view('notes.management');
+    }
 }

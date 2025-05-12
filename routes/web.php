@@ -54,6 +54,10 @@ Route::middleware('auth')->group(function () {
         ->name('annotations.destroy')
         ->middleware('web');
 
+    // Notes Management routes
+    Route::get('/notes', [PdfAnnotationController::class, 'notesManagement'])->name('notes.management');
+    Route::get('/notes/all', [PdfAnnotationController::class, 'getAllNotes'])->name('notes.all');
+
     // Book enrollment routes
     Route::post('/books/{book}/enroll', [BookEnrollmentController::class, 'enroll'])->name('books.enroll');
     Route::delete('/books/{book}/unenroll', [BookEnrollmentController::class, 'unenroll'])->name('books.unenroll');
