@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/vocabulary/{vocabulary}/review', [VocabularyController::class, 'review'])->name('vocabulary.review');
         Route::get('/flashcards', [VocabularyController::class, 'flashcards'])->name('vocabulary.flashcards');
         Route::get('/vocabulary-stats', [VocabularyController::class, 'stats'])->name('vocabulary.stats');
+        Route::post('/vocabulary/mark-due', [VocabularyController::class, 'markDueForReview'])->name('vocabulary.mark-due');
     });
 });
 

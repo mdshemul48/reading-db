@@ -291,6 +291,20 @@ class VocabularyController extends Controller
         // Get vocabulary items due for review
         $dueVocabulary = Vocabulary::getDueForReview($user->id);
 
+        // Log the results for debugging
+        \Log::info('Flashcards due for review', [
+            'user_id' => $user->id,
+            'count' => $dueVocabulary->count(),
+            'items' => $dueVocabulary->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'word' => $item->word,
+                    'next_review_at' => $item->next_review_at,
+                    'last_reviewed_at' => $item->last_reviewed_at
+                ];
+            })
+        ]);
+
         // Add mastery information
         $dueVocabulary->each(function ($vocabulary) {
             $vocabulary->mastery_percentage = $vocabulary->getMasteryPercentage();
@@ -352,5 +366,25 @@ class VocabularyController extends Controller
         return view('vocabulary.stats', [
             'stats' => $stats
         ]);
+    }
+
+    /**
+     * Mark vocabulary items as due for review.
+     */
+    public function markDueForReview()
+    {
+        $user = Auth::user();
+
+        // Get all vocabulary items for the user
+        $vocabulary = Vocabulary::where('user_id', $user->id)->get();
+
+        // Mark each item as due for review
+        foreach ($vocabulary as $item) {
+            $item->next_review_at = now();
+            $item->save();
+        }
+
+        return redirect()->route('vocabulary.flashcards')
+            ->with('success', 'All vocabulary items have been marked for review.');
     }
 }
