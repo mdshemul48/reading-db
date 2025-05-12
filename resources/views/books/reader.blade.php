@@ -718,16 +718,58 @@
                                         }
 
                                         // Position the highlight
-                                        div.style.left = positionData.left + 'px';
-                                        div.style.top = positionData.top + 'px';
-                                        div.style.width = positionData.width + 'px';
-                                        div.style.height = positionData.height + 'px';
-
-                                        // Add the highlight to the page
-                                        if (textLayer) {
-                                            textLayer.appendChild(div); // Add to text layer for better positioning
+                                        if (positionData.rects && positionData.rects.length > 0) {
+                                            // Render a highlight for each rect in positionData.rects
+                                            positionData.rects.forEach(rect => {
+                                                const highlightDiv = document.createElement('div');
+                                                highlightDiv.className = 'pdf-annotation-highlight';
+                                                highlightDiv.setAttribute('data-annotation-id', annotation.id);
+                                                highlightDiv.style.position = 'absolute';
+                                                highlightDiv.style.backgroundColor = highlightColor;
+                                                highlightDiv.style.mixBlendMode = 'multiply';
+                                                highlightDiv.style.opacity = '0.9';
+                                                highlightDiv.style.zIndex = '1';
+                                                highlightDiv.style.pointerEvents = 'auto';
+                                                highlightDiv.style.cursor = 'pointer';
+                                                highlightDiv.setAttribute('data-annotation-text', annotation.text_content || '');
+                                                highlightDiv.setAttribute('data-annotation-note', annotation.note || '');
+                                                highlightDiv.setAttribute('data-annotation-color', annotation.color || '#ffff00');
+                                                highlightDiv.setAttribute('data-annotation-page', annotation.page_number);
+                                                highlightDiv.addEventListener('click', function(e) {
+                                                    e.stopPropagation();
+                                                    const annotationId = this.getAttribute('data-annotation-id');
+                                                    const annotationText = this.getAttribute('data-annotation-text');
+                                                    const annotationNote = this.getAttribute('data-annotation-note');
+                                                    window.parent.postMessage({
+                                                        type: 'showNotePopup',
+                                                        id: annotationId,
+                                                        text: annotationText,
+                                                        note: annotationNote,
+                                                        rect: this.getBoundingClientRect(),
+                                                        pageRect: pageView.div.getBoundingClientRect()
+                                                    }, '*');
+                                                });
+                                                highlightDiv.style.left = rect.left + 'px';
+                                                highlightDiv.style.top = rect.top + 'px';
+                                                highlightDiv.style.width = rect.width + 'px';
+                                                highlightDiv.style.height = rect.height + 'px';
+                                                if (textLayer) {
+                                                    textLayer.appendChild(highlightDiv);
+                                                } else {
+                                                    pageView.div.appendChild(highlightDiv);
+                                                }
+                                            });
                                         } else {
-                                            pageView.div.appendChild(div);
+                                            // Fallback to using the main rect
+                                            div.style.left = positionData.left + 'px';
+                                            div.style.top = positionData.top + 'px';
+                                            div.style.width = positionData.width + 'px';
+                                            div.style.height = positionData.height + 'px';
+                                            if (textLayer) {
+                                                textLayer.appendChild(div);
+                                            } else {
+                                                pageView.div.appendChild(div);
+                                            }
                                         }
 
                                         console.log("Added highlight to page", annotation.page_number, div);
