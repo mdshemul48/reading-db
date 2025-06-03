@@ -11,3 +11,6 @@
             frameborder="0"></iframe>
     </div>
 </div>
+
+<!-- PDF Dark Mode Script -->
+<script src="{{ asset('js/pdf-dark-mode.js') }}"></script>

@@ -31,6 +31,26 @@
                     </div>
                 @endif
 
+                <button id="dark-mode-toggle"
+                    class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                    title="Toggle Dark Mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
+                <button id="brightness-settings-button"
+                    class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                    title="Display Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                </button>
+
                 <button id="toggle-annotations"
                     class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full"
                     title="Show Annotations">
@@ -2269,6 +2289,148 @@
                         alert('Speech synthesis is not supported in your browser.');
                     }
                 }
+
+                // Add event listener to brightness settings button
+                // NOTE: This is now handled by the Dark Mode Toggle Script at the bottom of the file
+                // Keeping this commented out to avoid duplicate event listeners
+                /*
+                                                                                if (brightnessSettingsButton) {
+                                                                                    brightnessSettingsButton.addEventListener('click', function() {
+                                                                                        // Get the iframe document
+                                                                                        const pdfViewer = document.getElementById('pdf-viewer');
+                                                                                        if (!pdfViewer) return;
+
+                                                                                        try {
+                                                                                            const iframeWindow = pdfViewer.contentWindow;
+                                                                                            if (!iframeWindow) return;
+
+                                                                                            // Try direct function calls in order of preference
+                                                                                            if (typeof iframeWindow.toggleBrightnessControls === 'function') {
+                                                                                                // Call the function directly in the iframe
+                                                                                                iframeWindow.toggleBrightnessControls();
+                                                                                            } else if (typeof iframeWindow.togglePdfBrightnessControls === 'function') {
+                                                                                                // Call the global function in the parent PDF-dark-mode.js
+                                                                                                iframeWindow.togglePdfBrightnessControls();
+                                                                                            } else {
+                                                                                                // Fallback to message passing
+                                                                                                iframeWindow.postMessage({
+                                                                                                    type: 'toggleBrightnessControls'
+                                                                                                }, '*');
+
+                                                                                                // Also create brightness panel directly in the parent window
+                                                                                                const container = document.createElement('div');
+                                                                                                container.id = 'parent-brightness-controls';
+                                                                                                container.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background-color: #121212;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            z-index: 9999;
+            width: 250px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            color: #f8e3c5;
+        `;
+
+                                                                                                container.innerHTML = `
+            <div style="text-align: center; margin-bottom: 10px; font-weight: bold;">Display Settings</div>
+            <div style="position: absolute; top: 5px; right: 10px; cursor: pointer; font-size: 16px;" onclick="this.parentElement.remove()">×</div>
+            <div style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Brightness</span>
+                    <span id="parent-brightness-value" style="background: #333; padding: 2px 5px; border-radius: 3px;">50%</span>
+                </div>
+                <input type="range" min="0.1" max="1" step="0.05" value="0.5"
+                    style="width: 100%;" id="parent-brightness-slider">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Contrast</span>
+                    <span id="parent-contrast-value" style="background: #333; padding: 2px 5px; border-radius: 3px;">120%</span>
+                </div>
+                <input type="range" min="0.8" max="1.5" step="0.05" value="1.2"
+                    style="width: 100%;" id="parent-contrast-slider">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Warmth</span>
+                    <span id="parent-sepia-value" style="background: #333; padding: 2px 5px; border-radius: 3px;">30%</span>
+                </div>
+                <input type="range" min="0" max="0.5" step="0.05" value="0.3"
+                    style="width: 100%;" id="parent-sepia-slider">
+            </div>
+            <button style="width: 100%; background: #444; color: #f8e3c5; border: none;
+                padding: 5px; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                Reset to Default
+            </button>
+        `;
+
+                                                                                                // Only add if it doesn't exist yet
+                                                                                                if (!document.getElementById('parent-brightness-controls')) {
+                                                                                                    document.body.appendChild(container);
+
+                                                                                                    // Add event listeners to sliders
+                                                                                                    document.getElementById('parent-brightness-slider').addEventListener(
+                                                                                                        'input',
+                                                                                                        function() {
+                                                                                                            const value = this.value;
+                                                                                                            document.getElementById('parent-brightness-value').textContent =
+                                                                                                                Math.round(value * 100) + '%';
+
+                                                                                                            // Store value in localStorage
+                                                                                                            localStorage.setItem('pdf-brightness', value);
+
+                                                                                                            // Send message to iframe
+                                                                                                            iframeWindow.postMessage({
+                                                                                                                type: 'updateBrightness',
+                                                                                                                value: value
+                                                                                                            }, '*');
+                                                                                                        });
+
+                                                                                                    document.getElementById('parent-contrast-slider').addEventListener('input',
+                                                                                                        function() {
+                                                                                                            const value = this.value;
+                                                                                                            document.getElementById('parent-contrast-value').textContent =
+                                                                                                                Math.round(value * 100) + '%';
+
+                                                                                                            // Store value in localStorage
+                                                                                                            localStorage.setItem('pdf-contrast', value);
+
+                                                                                                            // Send message to iframe
+                                                                                                            iframeWindow.postMessage({
+                                                                                                                type: 'updateContrast',
+                                                                                                                value: value
+                                                                                                            }, '*');
+                                                                                                        });
+
+                                                                                                    document.getElementById('parent-sepia-slider').addEventListener('input',
+                                                                                                        function() {
+                                                                                                            const value = this.value;
+                                                                                                            document.getElementById('parent-sepia-value').textContent = Math
+                                                                                                                .round(value * 100) + '%';
+
+                                                                                                            // Store value in localStorage
+                                                                                                            localStorage.setItem('pdf-sepia', value);
+
+                                                                                                            // Send message to iframe
+                                                                                                            iframeWindow.postMessage({
+                                                                                                                type: 'updateSepia',
+                                                                                                                value: value
+                                                                                                            }, '*');
+                                                                                                        });
+                                                                                                } else {
+                                                                                                    document.getElementById('parent-brightness-controls').style.display =
+                                                                                                        'block';
+                                                                                                }
+                                                                                            }
+                                                                                        } catch (error) {
+                                                                                            console.error('Error toggling brightness controls:', error);
+                                                                                        }
+                                                                                    });
+                                                                                }
+                                                                                */
             });
         </script>
     @endpush
@@ -2303,4 +2465,415 @@
             padding: 0 !important;
         }
     </style>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Immediately check for and store references to critical DOM elements
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const brightnessSettingsButton = document.getElementById('brightness-settings-button');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize dark mode state from localStorage or default to true (dark mode on)
+            let isDarkMode = localStorage.getItem('pdf-dark-mode') === null ?
+                true :
+                localStorage.getItem('pdf-dark-mode') !== 'false';
+
+            // Always save the initial value to localStorage
+            localStorage.setItem('pdf-dark-mode', isDarkMode);
+
+            // Function to apply filter to the iframe
+            function applyFilterToIframe(filterType, value) {
+                const pdfViewer = document.getElementById('pdf-viewer');
+                if (!pdfViewer) {
+                    console.error('PDF viewer not found');
+                    return;
+                }
+
+                try {
+                    const iframeWindow = pdfViewer.contentWindow;
+                    if (!iframeWindow) {
+                        console.error('Cannot access iframe window');
+                        return;
+                    }
+
+                    console.log(`Applying ${filterType} with value ${value} to iframe`);
+
+                    // Try to use the iframe's function via postMessage
+                    iframeWindow.postMessage({
+                        type: 'update' + filterType.charAt(0).toUpperCase() + filterType.slice(1),
+                        value: value
+                    }, '*');
+
+                    // Also inject a style element directly for immediate effect
+                    try {
+                        const iframeDoc = pdfViewer.contentDocument || iframeWindow.document;
+
+                        // Create or get existing style element
+                        let styleEl = iframeDoc.getElementById('pdf-filters-css');
+                        if (!styleEl) {
+                            styleEl = iframeDoc.createElement('style');
+                            styleEl.id = 'pdf-filters-css';
+                            iframeDoc.head.appendChild(styleEl);
+                        }
+
+                        // Update CSS filters
+                        let cssFilters = '';
+
+                        // Get current values from localStorage
+                        const brightness = localStorage.getItem('pdf-brightness') || 0.5;
+                        const contrast = localStorage.getItem('pdf-contrast') || 1.2;
+                        const sepia = localStorage.getItem('pdf-sepia') || 0.3;
+
+                        // Apply filters to viewer container
+                        cssFilters = `
+                            #viewerContainer {
+                                filter: brightness(${brightness}) contrast(${contrast}) sepia(${sepia}) !important;
+                            }
+                        `;
+
+                        styleEl.textContent = cssFilters;
+                        console.log('Applied CSS filters:', cssFilters);
+                    } catch (err) {
+                        console.error('Error setting direct CSS filters:', err);
+                    }
+
+                    // Also create an event that PDF.js can listen for
+                    const event = new CustomEvent('pdfFilterChange', {
+                        detail: {
+                            type: filterType,
+                            value: value
+                        }
+                    });
+                    window.dispatchEvent(event);
+
+                } catch (error) {
+                    console.error('Failed to update filters:', error);
+                }
+            }
+
+            // Function to create standalone brightness controls
+            function createStandaloneBrightnessControls() {
+                console.log('Creating brightness controls...');
+
+                // Remove any existing brightness controls
+                const existingControls = document.getElementById('standalone-brightness-controls');
+                if (existingControls) {
+                    console.log('Found existing controls, toggling visibility');
+                    existingControls.classList.toggle('hidden');
+                    return;
+                }
+
+                console.log('Creating new brightness controls panel');
+
+                // Get values from localStorage
+                const brightnessLevel = localStorage.getItem('pdf-brightness') || 0.5;
+                const contrastLevel = localStorage.getItem('pdf-contrast') || 1.2;
+                const sepiaLevel = localStorage.getItem('pdf-sepia') || 0.3;
+
+                // Create container
+                const container = document.createElement('div');
+                container.id = 'standalone-brightness-controls';
+                container.className =
+                    'fixed z-50 top-16 right-4 bg-gray-800 text-gray-200 rounded-lg shadow-lg p-4 w-64';
+
+                // Ensure the panel is visible initially
+                container.style.display = 'block';
+
+                container.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium text-white">Display Settings</h3>
+                        <button id="close-brightness-controls" class="text-gray-400 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between mb-1">
+                            <label class="text-sm">Brightness</label>
+                            <span id="brightness-value" class="text-sm bg-gray-700 px-2 rounded">${Math.round(brightnessLevel * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.1" max="1" step="0.05" value="${brightnessLevel}"
+                            class="w-full" id="brightness-slider">
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between mb-1">
+                            <label class="text-sm">Contrast</label>
+                            <span id="contrast-value" class="text-sm bg-gray-700 px-2 rounded">${Math.round(contrastLevel * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.8" max="1.5" step="0.05" value="${contrastLevel}"
+                            class="w-full" id="contrast-slider">
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between mb-1">
+                            <label class="text-sm">Warmth</label>
+                            <span id="sepia-value" class="text-sm bg-gray-700 px-2 rounded">${Math.round(sepiaLevel * 100)}%</span>
+                        </div>
+                        <input type="range" min="0" max="0.5" step="0.05" value="${sepiaLevel}"
+                            class="w-full" id="sepia-slider">
+                    </div>
+
+                    <button id="reset-filters" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded text-sm">
+                        Reset to Default
+                    </button>
+                `;
+
+                // Add to document
+                document.body.appendChild(container);
+                console.log('Added brightness controls to document');
+
+                // Get the PDF viewer iframe
+                const pdfViewer = document.getElementById('pdf-viewer');
+
+                // Add event listeners
+                document.getElementById('close-brightness-controls').addEventListener('click', function() {
+                    console.log('Close button clicked');
+                    container.style.display = 'none';
+                });
+
+                document.getElementById('brightness-slider').addEventListener('input', function() {
+                    const value = this.value;
+                    document.getElementById('brightness-value').textContent = Math.round(value * 100) +
+                        '%';
+                    localStorage.setItem('pdf-brightness', value);
+
+                    // Apply to iframe
+                    applyFilterToIframe('brightness', value);
+                });
+
+                document.getElementById('contrast-slider').addEventListener('input', function() {
+                    const value = this.value;
+                    document.getElementById('contrast-value').textContent = Math.round(value * 100) +
+                        '%';
+                    localStorage.setItem('pdf-contrast', value);
+
+                    // Apply to iframe
+                    applyFilterToIframe('contrast', value);
+                });
+
+                document.getElementById('sepia-slider').addEventListener('input', function() {
+                    const value = this.value;
+                    document.getElementById('sepia-value').textContent = Math.round(value * 100) + '%';
+                    localStorage.setItem('pdf-sepia', value);
+
+                    // Apply to iframe
+                    applyFilterToIframe('sepia', value);
+                });
+
+                document.getElementById('reset-filters').addEventListener('click', function() {
+                    // Reset to defaults
+                    const defaultBrightness = 0.5;
+                    const defaultContrast = 1.2;
+                    const defaultSepia = 0.3;
+
+                    // Update UI
+                    document.getElementById('brightness-value').textContent = Math.round(
+                        defaultBrightness *
+                        100) + '%';
+                    document.getElementById('brightness-slider').value = defaultBrightness;
+
+                    document.getElementById('contrast-value').textContent = Math.round(defaultContrast *
+                        100) + '%';
+                    document.getElementById('contrast-slider').value = defaultContrast;
+
+                    document.getElementById('sepia-value').textContent = Math.round(defaultSepia *
+                            100) +
+                        '%';
+                    document.getElementById('sepia-slider').value = defaultSepia;
+
+                    // Save to localStorage
+                    localStorage.setItem('pdf-brightness', defaultBrightness);
+                    localStorage.setItem('pdf-contrast', defaultContrast);
+                    localStorage.setItem('pdf-sepia', defaultSepia);
+
+                    // Apply to iframe
+                    applyFilterToIframe('brightness', defaultBrightness);
+                    applyFilterToIframe('contrast', defaultContrast);
+                    applyFilterToIframe('sepia', defaultSepia);
+                });
+
+                // Explicitly set z-index to ensure it's on top
+                container.style.zIndex = "9999";
+
+                // Click outside to close - use a separate function so we can remove it later
+                const handleClickOutside = function(e) {
+                    if (container && !container.contains(e.target) && brightnessSettingsButton && e
+                        .target !==
+                        brightnessSettingsButton) {
+                        console.log('Clicked outside, hiding panel');
+                        container.style.display = 'none';
+                        // Remove the event listener after hiding the panel to prevent multiple handlers
+                        document.removeEventListener('click', handleClickOutside);
+                    }
+                };
+
+                // Add the click outside handler
+                document.addEventListener('click', handleClickOutside);
+
+                // Return the container for testing
+                return container;
+            }
+
+            // Function to apply dark mode to the PDF viewer
+            function applyDarkMode() {
+                const pdfViewer = document.getElementById('pdf-viewer');
+                if (!pdfViewer) {
+                    console.error('PDF viewer iframe not found');
+                    return;
+                }
+
+                // Try to access the iframe document
+                try {
+                    // Create a function to inject the dark mode CSS
+                    const injectDarkMode = () => {
+                        try {
+                            const iframeDoc = pdfViewer.contentDocument || pdfViewer.contentWindow.document;
+
+                            // If we can't access the iframe content, it might be due to cross-origin restrictions
+                            if (!iframeDoc) {
+                                console.error(
+                                    'Cannot access iframe content - possible cross-origin restriction');
+                                return;
+                            }
+
+                            // Create link element for the dark mode CSS if it doesn't exist
+                            let darkModeLink = iframeDoc.getElementById('pdf-dark-mode-css');
+
+                            if (!darkModeLink) {
+                                darkModeLink = iframeDoc.createElement('link');
+                                darkModeLink.rel = 'stylesheet';
+                                darkModeLink.href = '{{ asset('css/pdf-dark-mode.css') }}';
+                                darkModeLink.id = 'pdf-dark-mode-css';
+                                iframeDoc.head.appendChild(darkModeLink);
+                                console.log('PDF dark mode CSS injected');
+                            }
+
+                            // Toggle visibility based on current mode
+                            darkModeLink.disabled = !isDarkMode;
+                            console.log('PDF dark mode', isDarkMode ? 'enabled' : 'disabled');
+                        } catch (error) {
+                            console.error('Failed to apply PDF dark mode:', error);
+                        }
+                    };
+
+                    // Try to inject immediately
+                    injectDarkMode();
+
+                    // And also try again after a short delay to ensure the iframe is fully loaded
+                    setTimeout(injectDarkMode, 1000);
+                    setTimeout(injectDarkMode, 2000);
+
+                    // Add load event listener to the iframe if it's not fully loaded yet
+                    pdfViewer.addEventListener('load', function() {
+                        // Wait a moment for the iframe content to be fully loaded
+                        setTimeout(injectDarkMode, 500);
+                        setTimeout(injectDarkMode, 1500);
+                    });
+
+                } catch (error) {
+                    console.error('Error setting up dark mode:', error);
+                }
+            }
+
+            // Function to update the icon based on dark mode state
+            const updateIcon = () => {
+                if (isDarkMode) {
+                    darkModeToggle.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>`;
+                    darkModeToggle.title = "Switch to Light Mode";
+                } else {
+                    darkModeToggle.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>`;
+                    darkModeToggle.title = "Switch to Dark Mode";
+                }
+            };
+
+            // Check if dark mode toggle button exists
+            if (!darkModeToggle) {
+                console.error('Dark mode toggle button not found');
+                return;
+            }
+
+            // Now that all functions are defined, add event listeners
+
+            // Add direct event listener to the brightness settings button
+            if (brightnessSettingsButton) {
+                console.log('Adding event listener to brightness settings button');
+                brightnessSettingsButton.addEventListener('click', function(event) {
+                    // Prevent the event from bubbling up
+                    event.stopPropagation();
+
+                    console.log('Brightness settings button clicked');
+
+                    // Check for existing controls first
+                    const existingControls = document.getElementById('standalone-brightness-controls');
+                    if (existingControls) {
+                        console.log('Found existing controls, toggling visibility');
+                        if (existingControls.style.display === 'none') {
+                            existingControls.style.display = 'block';
+                        } else {
+                            existingControls.style.display = 'none';
+                        }
+                        return;
+                    }
+
+                    // Create and show the brightness panel directly
+                    const panel = createStandaloneBrightnessControls();
+
+                    // Position the panel relative to the button if needed
+                    const buttonRect = brightnessSettingsButton.getBoundingClientRect();
+                    panel.style.top = (buttonRect.bottom + 10) + 'px';
+                    panel.style.right = (window.innerWidth - buttonRect.right + 5) + 'px';
+                });
+            } else {
+                console.error('Brightness settings button not found!');
+            }
+
+            // Update icon initially
+            updateIcon();
+
+            // Apply dark mode on load
+            applyDarkMode();
+
+            // Toggle dark mode when button is clicked
+            darkModeToggle.addEventListener('click', function() {
+                isDarkMode = !isDarkMode;
+                localStorage.setItem('pdf-dark-mode', isDarkMode);
+                updateIcon();
+                applyDarkMode();
+            });
+
+            // Apply saved brightness/contrast/sepia settings on load
+            const applyStoredFilters = () => {
+                const brightnessLevel = localStorage.getItem('pdf-brightness') || 0.5;
+                const contrastLevel = localStorage.getItem('pdf-contrast') || 1.2;
+                const sepiaLevel = localStorage.getItem('pdf-sepia') || 0.3;
+
+                console.log('Applying stored filters:', {
+                    brightness: brightnessLevel,
+                    contrast: contrastLevel,
+                    sepia: sepiaLevel
+                });
+
+                // Wait for iframe to be ready
+                setTimeout(() => {
+                    applyFilterToIframe('brightness', brightnessLevel);
+                    applyFilterToIframe('contrast', contrastLevel);
+                    applyFilterToIframe('sepia', sepiaLevel);
+                }, 2000);
+            };
+
+            // Apply stored filters when the page loads
+            applyStoredFilters();
+        });
+    </script>
 </x-app-layout>
