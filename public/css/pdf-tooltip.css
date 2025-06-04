@@ -1,0 +1,315 @@
+/* PDF Reader Text Selection Tooltip Styles */
+
+/* Tooltip container */
+.pdf-text-tooltip {
+    position: absolute;
+    display: none;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    z-index: 9999;
+    flex-direction: row;
+    align-items: center;
+    border: 1px solid #ddd;
+    max-width: 400px;
+    transform-origin: top center;
+    animation: tooltip-appear 0.15s ease-out forwards;
+    pointer-events: auto !important;
+}
+
+@keyframes tooltip-appear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Tooltip buttons */
+.tooltip-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    margin: 0 2px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #555;
+}
+
+.tooltip-btn:hover {
+    background-color: #f5f5f5;
+    color: #000;
+}
+
+.tooltip-btn svg {
+    width: 20px;
+    height: 20px;
+    margin-bottom: 4px;
+}
+
+.tooltip-btn span {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Button specific colors */
+.highlight-btn:hover {
+    color: #f59e0b;
+}
+
+.copy-btn:hover {
+    color: #3b82f6;
+}
+
+.note-btn:hover {
+    color: #10b981;
+}
+
+.search-btn:hover {
+    color: #6366f1;
+}
+
+/* Notification */
+.pdf-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10000;
+    animation: notification-appear 0.3s ease-out forwards;
+    pointer-events: auto !important;
+}
+
+.pdf-notification.fade-out {
+    animation: notification-disappear 0.3s ease-out forwards;
+}
+
+@keyframes notification-appear {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes notification-disappear {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+}
+
+/* Note dialog */
+.pdf-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+    pointer-events: auto !important;
+}
+
+.dialog-content {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.dialog-content h3 {
+    margin-top: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.selected-text {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-style: italic;
+    font-size: 14px;
+    color: #555;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+#note-text {
+    width: 100%;
+    min-height: 120px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 15px;
+    resize: vertical;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.dialog-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.cancel-btn {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.save-btn {
+    background-color: #3b82f6;
+    color: white;
+}
+
+/* Dark mode modifications */
+@media (prefers-color-scheme: dark) {
+    .pdf-text-tooltip {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+
+    .tooltip-btn {
+        color: #e2e8f0;
+    }
+
+    .tooltip-btn:hover {
+        background-color: #4a5568;
+        color: #fff;
+    }
+
+    .dialog-content {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+
+    .dialog-content h3 {
+        color: #e2e8f0;
+    }
+
+    .selected-text {
+        background-color: #4a5568;
+        color: #e2e8f0;
+    }
+
+    #note-text {
+        background: #1a202c;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+
+    .cancel-btn {
+        background-color: #4a5568;
+        color: #e2e8f0;
+    }
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+    .pdf-text-tooltip {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .tooltip-btn {
+        margin: 4px;
+    }
+
+    .dialog-content {
+        width: 95%;
+        padding: 15px;
+    }
+}
+
+/* Fix for PDF.js text layer */
+.textLayer {
+    position: absolute !important;
+    text-align: initial !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    overflow: hidden !important;
+    opacity: 1 !important;
+    line-height: 1 !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    pointer-events: auto !important;
+}
+
+.textLayer span,
+.textLayer br {
+    color: transparent !important;
+    position: absolute !important;
+    white-space: pre !important;
+    cursor: text !important;
+    transform-origin: 0% 0% !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    pointer-events: auto !important;
+}
+
+.textLayer span::selection {
+    background-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* For testing - make text visible */
+.textLayer span.debug-mode {
+    color: rgba(0, 0, 0, 0.2) !important;
+    background-color: rgba(255, 255, 0, 0.1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Try to hijack PDF.js viewer styles */
+.pdfViewer .textLayer {
+    z-index: 2 !important;
+    opacity: 1 !important;
+}
+
+#pdf-viewer {
+    position: relative !important;
+    overflow: auto !important;
+}
+
+#pdf-container {
+    position: relative !important;
+}

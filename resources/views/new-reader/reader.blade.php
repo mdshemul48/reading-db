@@ -18,6 +18,7 @@
 
     <!-- Reader Styles -->
     <link href="{{ asset('css/pdf-reader.css') }}" rel="stylesheet" />
+    <link href="{{ asset('css/pdf-tooltip.css') }}" rel="stylesheet" />
 
     <!-- PDF Reader Module Scripts -->
     <script src="{{ asset('js/pdf-modules/core.js') }}"></script>
@@ -29,6 +30,140 @@
     <script src="{{ asset('js/pdf-modules/color-manager.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/ui-events.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/highlights.js') }}"></script>
+    <script src="{{ asset('js/pdf-modules/tooltip.js') }}"></script>
+
+    <!-- Create a tooltip element early to avoid timing issues -->
+    <script>
+        // Initialize the tooltip element immediately
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create tooltip element if it doesn't exist yet
+            if (!document.getElementById('pdf-text-tooltip')) {
+                const tooltip = document.createElement('div');
+                tooltip.id = 'pdf-text-tooltip';
+                tooltip.className = 'pdf-text-tooltip';
+                tooltip.innerHTML = `
+                    <button class="tooltip-btn highlight-btn" data-action="highlight">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M15.2 2.09L21 7.89V19c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h10.2zm-1.4 3l-1.48.29-.7 1.43-.7-1.43-1.48-.29 1.06-1.08-.26-1.48 1.38.7L12 2.52l1.38.7-.26 1.48L14.6 5.81l-1.48.29-.7 1.43-.7-1.43z" fill="currentColor"/>
+                        </svg>
+                        <span>Highlight</span>
+                    </button>
+                    <button class="tooltip-btn copy-btn" data-action="copy">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/>
+                        </svg>
+                        <span>Copy</span>
+                    </button>
+                    <button class="tooltip-btn note-btn" data-action="note">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="currentColor"/>
+                        </svg>
+                        <span>Add Note</span>
+                    </button>
+                    <button class="tooltip-btn search-btn" data-action="search">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+                        </svg>
+                        <span>Search Web</span>
+                    </button>
+                `;
+                document.body.appendChild(tooltip);
+                console.log('Tooltip element created early to avoid timing issues');
+            }
+        });
+
+        // Direct tooltip implementation that doesn't rely on TooltipManager
+        window.showPdfTooltip = function(text, x, y) {
+            console.log('showPdfTooltip called with:', text, x, y);
+
+            // Get or create tooltip
+            let tooltip = document.getElementById('pdf-text-tooltip');
+            if (!tooltip) {
+                console.log('Creating tooltip element on-demand');
+                tooltip = document.createElement('div');
+                tooltip.id = 'pdf-text-tooltip';
+                tooltip.className = 'pdf-text-tooltip';
+                tooltip.innerHTML = `
+                    <button class="tooltip-btn highlight-btn" data-action="highlight">Highlight</button>
+                    <button class="tooltip-btn copy-btn" data-action="copy">Copy</button>
+                    <button class="tooltip-btn note-btn" data-action="note">Add Note</button>
+                    <button class="tooltip-btn search-btn" data-action="search">Search Web</button>
+                `;
+                document.body.appendChild(tooltip);
+
+                // Add event listeners to buttons
+                tooltip.querySelectorAll('.tooltip-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const action = e.currentTarget.getAttribute('data-action');
+                        console.log('Tooltip action clicked:', action);
+
+                        switch (action) {
+                            case 'copy':
+                                navigator.clipboard.writeText(text)
+                                    .then(() => {
+                                        showPdfNotification('Text copied to clipboard');
+                                    })
+                                    .catch(err => {
+                                        console.error('Failed to copy text:', err);
+                                    });
+                                break;
+                            case 'search':
+                                window.open(
+                                    `https://www.google.com/search?q=${encodeURIComponent(text)}`,
+                                    '_blank');
+                                break;
+                        }
+
+                        // Hide tooltip
+                        tooltip.style.display = 'none';
+                    });
+                });
+            }
+
+            // Store selected text as a data attribute
+            tooltip.setAttribute('data-selected-text', text);
+
+            // Position the tooltip
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+
+            // Show the tooltip
+            tooltip.style.display = 'flex';
+            console.log('Tooltip displayed at', x, y);
+
+            // Try to use TooltipManager if available (but we don't depend on it)
+            if (window.TooltipManager) {
+                console.log('TooltipManager found, using it as backup');
+                try {
+                    if (typeof window.TooltipManager.forceShowTooltip === 'function') {
+                        window.TooltipManager.forceShowTooltip(text, x, y);
+                    } else if (window.TooltipManager.showTooltip) {
+                        window.selectedText = text;
+                        window.TooltipManager.showTooltip();
+                    }
+                } catch (err) {
+                    console.error('Error using TooltipManager:', err);
+                    // We already displayed the tooltip, so this is just a backup
+                }
+            }
+        };
+
+        // Show notification
+        function showPdfNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'pdf-notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Remove after 2 seconds
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 1700);
+        }
+    </script>
 </head>
 
 <body>
@@ -75,13 +210,6 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                    </svg>
-                </button>
-
-                <button id="clear-highlights-btn" class="btn" title="Clear Highlights">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </button>
             </div>
@@ -162,19 +290,227 @@
             window.initialPage = {{ isset($enrollment) && $enrollment->current_page ? $enrollment->current_page : 1 }};
         @endif
 
-        // Initialize the highlights module after the page loads
+        // Initialize modules after the page loads
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize highlights module after a small delay to ensure PDF.js is loaded
-            setTimeout(function() {
-                HighlightManager.init();
+            console.log('DOM Content Loaded - Initializing PDF reader');
 
-                // Add event listener for the clear highlights button
-                document.getElementById('clear-highlights-btn').addEventListener('click', function() {
-                    if (confirm('Are you sure you want to clear all highlights?')) {
-                        HighlightManager.clearAllHighlights();
+            // Add event listener for when PDF is fully loaded and rendered
+            const pdfContainer = document.getElementById('pdf-container');
+
+            // Ensure tooltip is initialized early
+            if (window.TooltipManager) {
+                console.log('TooltipManager found, initializing');
+                TooltipManager.init();
+                console.log('TooltipManager initialized on page load');
+
+                // Expose TooltipManager methods to window for direct access
+                window.forceShowTooltip = function(text, x, y) {
+                    TooltipManager.forceShowTooltip(text, x, y);
+                };
+            } else {
+                console.log('TooltipManager not found yet, will try again later');
+
+                // Wait for TooltipManager to load
+                const checkInterval = setInterval(function() {
+                    if (window.TooltipManager) {
+                        console.log('TooltipManager found after waiting');
+                        clearInterval(checkInterval);
+                        TooltipManager.init();
                     }
+                }, 500);
+            }
+
+            // Remove the test tooltip that appears on page load
+            // Test the tooltip directly
+            // setTimeout(function() {
+            //     console.log('Testing direct tooltip display');
+            //     showPdfTooltip('Test tooltip', window.innerWidth/2 - 100, 100);
+            // }, 1000);
+
+            // First initialize
+            setTimeout(function() {
+                console.log('Initializing tooltip and highlight managers');
+                if (window.HighlightManager) {
+                    HighlightManager.init();
+                }
+
+                // Direct implementation of text selection handler that bypasses all other handlers
+                document.addEventListener('mouseup', function(e) {
+                    console.log('Direct mouseup event on document', e.target);
+
+                    setTimeout(function() {
+                        const selection = window.getSelection();
+                        const text = selection.toString().trim();
+
+                        if (text) {
+                            console.log('Selected text directly captured:', text);
+
+                            try {
+                                // Get position information
+                                if (selection.rangeCount > 0) {
+                                    const range = selection.getRangeAt(0);
+                                    const rect = range.getBoundingClientRect();
+
+                                    // Force show the tooltip directly
+                                    showPdfTooltip(text, rect.left + (rect.width / 2) - 100,
+                                        rect.top - 45);
+                                    console.log('Forced tooltip to show at', rect.left, rect
+                                        .top);
+                                }
+                            } catch (err) {
+                                console.error('Error showing tooltip:', err);
+                            }
+                        }
+                    }, 10);
+                });
+
+                // Add the same for touchend for mobile devices
+                document.addEventListener('touchend', function(e) {
+                    console.log('Direct touchend event on document', e.target);
+
+                    setTimeout(function() {
+                        const selection = window.getSelection();
+                        const text = selection.toString().trim();
+
+                        if (text) {
+                            console.log('Selected text directly captured (touch):', text);
+
+                            try {
+                                // Get position information
+                                if (selection.rangeCount > 0) {
+                                    const range = selection.getRangeAt(0);
+                                    const rect = range.getBoundingClientRect();
+
+                                    // Force show the tooltip directly
+                                    showPdfTooltip(text, rect.left + (rect.width / 2) - 100,
+                                        rect.top - 45);
+                                    console.log('Forced tooltip to show at', rect.left, rect
+                                        .top);
+                                }
+                            } catch (err) {
+                                console.error('Error showing tooltip:', err);
+                            }
+                        }
+                    }, 10);
                 });
             }, 1000);
+
+            // Also initialize when new pages are added (for dynamic loading)
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                        // If new textLayer is added, reinitialize tooltip
+                        for (let i = 0; i < mutation.addedNodes.length; i++) {
+                            const node = mutation.addedNodes[i];
+                            if (node.classList &&
+                                (node.classList.contains('page') ||
+                                    node.classList.contains('textLayer'))) {
+                                console.log('New page or textLayer detected, initializing tooltip');
+                                if (window.TooltipManager) {
+                                    TooltipManager.init();
+                                }
+
+                                // Add a direct mouseup handler to the textLayer
+                                if (node.classList.contains('textLayer')) {
+                                    node.addEventListener('mouseup', function(e) {
+                                        console.log('Direct textLayer mouseup', e.target);
+                                        // Check if text is selected
+                                        const selection = window.getSelection();
+                                        const text = selection.toString().trim();
+                                        if (text) {
+                                            console.log(
+                                                'Text selected from direct handler:',
+                                                text);
+
+                                            // Force show the tooltip
+                                            try {
+                                                // Get position information
+                                                if (selection.rangeCount > 0) {
+                                                    const range = selection.getRangeAt(0);
+                                                    const rect = range
+                                                        .getBoundingClientRect();
+
+                                                    showPdfTooltip(text, rect.left + (rect
+                                                            .width / 2) - 100, rect
+                                                        .top - 45);
+                                                    console.log('Forced tooltip to show at',
+                                                        rect.left, rect.top);
+                                                }
+                                            } catch (err) {
+                                                console.error('Error showing tooltip:',
+                                                    err);
+                                            }
+                                        }
+                                    });
+
+                                    // Add handler to all spans in this text layer
+                                    const spans = node.querySelectorAll('span');
+                                    spans.forEach(span => {
+                                        span.addEventListener('mouseup', function(e) {
+                                            console.log('Direct span mouseup', this
+                                                .textContent);
+                                            // Direct span handling for selection
+                                            setTimeout(() => {
+                                                const selection = window
+                                                    .getSelection();
+                                                const text = selection
+                                                    .toString().trim();
+                                                if (text) {
+                                                    console.log(
+                                                        'Text selected from span:',
+                                                        text);
+
+                                                    try {
+                                                        // Get position information
+                                                        if (selection
+                                                            .rangeCount > 0
+                                                        ) {
+                                                            const range =
+                                                                selection
+                                                                .getRangeAt(
+                                                                    0);
+                                                            const rect =
+                                                                range
+                                                                .getBoundingClientRect();
+
+                                                            showPdfTooltip(
+                                                                text,
+                                                                rect
+                                                                .left +
+                                                                (rect
+                                                                    .width /
+                                                                    2) -
+                                                                100,
+                                                                rect
+                                                                .top -
+                                                                45);
+                                                            console.log(
+                                                                'Forced tooltip to show from span at',
+                                                                rect
+                                                                .left,
+                                                                rect.top
+                                                            );
+                                                        }
+                                                    } catch (err) {
+                                                        console.error(
+                                                            'Error showing tooltip from span:',
+                                                            err);
+                                                    }
+                                                }
+                                            }, 10);
+                                        });
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            observer.observe(pdfContainer, {
+                childList: true,
+                subtree: true
+            });
         });
     </script>
 </body>

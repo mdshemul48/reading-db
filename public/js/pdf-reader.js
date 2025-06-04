@@ -52,6 +52,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return HighlightManager.getHighlights();
             }
             return [];
+        },
+        // Add tooltip management methods to the public API
+        initializeTooltip: function() {
+            if (TooltipManager) {
+                TooltipManager.init();
+            }
         }
     };
 });

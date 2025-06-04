@@ -111,7 +111,7 @@ const PageRenderer = (function() {
             canvasWrapper.appendChild(canvas);
             pageContainer.appendChild(canvasWrapper);
 
-            // Create text layer div
+            // Create text layer div with enhanced properties for selection
             const textLayerDiv = document.createElement('div');
             textLayerDiv.className = 'textLayer';
             textLayerDiv.style.width = `${viewport.width}px`;
@@ -123,7 +123,33 @@ const PageRenderer = (function() {
             textLayerDiv.style.bottom = '0';
             textLayerDiv.style.zIndex = '2';
             textLayerDiv.style.setProperty('--scale-factor', state.scale.toString());
+            textLayerDiv.style.userSelect = 'text';
+            textLayerDiv.style.webkitUserSelect = 'text';
+            textLayerDiv.style.MozUserSelect = 'text';
+            textLayerDiv.style.msUserSelect = 'text';
+            textLayerDiv.style.pointerEvents = 'auto';
+
             pageContainer.appendChild(textLayerDiv);
+
+            // Add direct mouseup event listener for text selection
+            textLayerDiv.addEventListener('mouseup', function(e) {
+                console.log('Text layer mouseup event', e.target);
+                // Trigger a manual event if TooltipManager is available
+                if (window.TooltipManager && window.TooltipManager.debug) {
+                    window.TooltipManager.debug('Text selection from text layer mouseup');
+                }
+
+                const selection = window.getSelection();
+                if (selection && selection.toString().trim()) {
+                    console.log('Text selected in text layer:', selection.toString().trim());
+                    // Dispatch a custom event that can be captured by the tooltip manager
+                    const event = new CustomEvent('textselected', {
+                        bubbles: true,
+                        detail: { selection: selection }
+                    });
+                    textLayerDiv.dispatchEvent(event);
+                }
+            });
 
             // Store reference to canvas
             state.pagesCanvases[num] = canvas;
@@ -154,7 +180,7 @@ const PageRenderer = (function() {
                 // Get text content with improved settings for better text extraction
                 return page.getTextContent({
                     normalizeWhitespace: false, // Don't normalize whitespace to preserve text positioning
-                    disableCombineTextItems: true, // Don't combine text items to keep original positions
+                    disableCombineTextItems: false, // Use false to improve text selection
                     includeMarkedContent: true // Include marked content for better text recognition
                 });
             }).then((textContent) => {
@@ -169,11 +195,31 @@ const PageRenderer = (function() {
 
                 return textLayer.promise;
             }).then(() => {
-                // Ensure text is properly positioned
+                // Ensure text is properly positioned and selectable
                 Array.from(textLayerDiv.children).forEach(span => {
                     // Remove any shadows from spans
                     span.style.textShadow = 'none';
                     span.style.boxShadow = 'none';
+
+                    // Enhance text selection capabilities
+                    span.style.userSelect = 'text';
+                    span.style.webkitUserSelect = 'text';
+                    span.style.MozUserSelect = 'text';
+                    span.style.msUserSelect = 'text';
+                    span.style.pointerEvents = 'auto';
+
+                    // Add data attribute for easier debugging
+                    span.setAttribute('data-selectable', 'true');
+
+                    // Add direct event listener for text selection
+                    span.addEventListener('mouseup', function(e) {
+                        console.log('Text span mouseup event', this.textContent);
+                        // Check if text is selected
+                        const selection = window.getSelection();
+                        if (selection && selection.toString().trim()) {
+                            console.log('Text selected in span:', selection.toString().trim());
+                        }
+                    });
                 });
 
                 // Update page positions for navigation
@@ -192,6 +238,12 @@ const PageRenderer = (function() {
                         pageContainer.scrollIntoView();
                     }, 100);
                 }
+
+                // Notify that a new text layer is available
+                console.log(`Text layer for page ${num} is now available`);
+                document.dispatchEvent(new CustomEvent('textlayerrendered', {
+                    detail: { pageNumber: num, textLayer: textLayerDiv }
+                }));
             }).catch(err => {
                 console.error('Error rendering text layer:', err);
             });
