@@ -86,19 +86,44 @@ const PageRenderer = (function() {
             const pageContainer = document.createElement('div');
             pageContainer.className = 'pdf-page';
             pageContainer.dataset.pageNumber = num;
+            pageContainer.style.width = `${viewport.width}px`;
+            pageContainer.style.height = `${viewport.height}px`;
+
             if (position === 'bottom') {
                 pageContainer.classList.add('page-entering-bottom');
             } else if (position === 'top') {
                 pageContainer.classList.add('page-entering-top');
             }
 
-            // Create canvas for this page
+            // Create canvas wrapper and canvas for this page
+            const canvasWrapper = document.createElement('div');
+            canvasWrapper.className = 'canvasWrapper';
+            canvasWrapper.style.width = `${viewport.width}px`;
+            canvasWrapper.style.height = `${viewport.height}px`;
+
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for better performance
             canvas.height = viewport.height;
             canvas.width = viewport.width;
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
 
-            pageContainer.appendChild(canvas);
+            canvasWrapper.appendChild(canvas);
+            pageContainer.appendChild(canvasWrapper);
+
+            // Create text layer div
+            const textLayerDiv = document.createElement('div');
+            textLayerDiv.className = 'textLayer';
+            textLayerDiv.style.width = `${viewport.width}px`;
+            textLayerDiv.style.height = `${viewport.height}px`;
+            textLayerDiv.style.position = 'absolute';
+            textLayerDiv.style.left = '0';
+            textLayerDiv.style.top = '0';
+            textLayerDiv.style.right = '0';
+            textLayerDiv.style.bottom = '0';
+            textLayerDiv.style.zIndex = '2';
+            textLayerDiv.style.setProperty('--scale-factor', state.scale.toString());
+            pageContainer.appendChild(textLayerDiv);
 
             // Store reference to canvas
             state.pagesCanvases[num] = canvas;
@@ -116,13 +141,41 @@ const PageRenderer = (function() {
             // Render PDF page into canvas context
             const renderContext = {
                 canvasContext: ctx,
-                viewport: viewport
+                viewport: viewport,
+                // Enable text rendering for better quality
+                renderInteractiveForms: true,
+                enableWebGL: false
             };
 
             const renderTask = page.render(renderContext);
 
             // Wait for rendering to finish
             renderTask.promise.then(() => {
+                // Get text content with improved settings for better text extraction
+                return page.getTextContent({
+                    normalizeWhitespace: false, // Don't normalize whitespace to preserve text positioning
+                    disableCombineTextItems: true, // Don't combine text items to keep original positions
+                    includeMarkedContent: true // Include marked content for better text recognition
+                });
+            }).then((textContent) => {
+                // Render text layer with improved options
+                const textLayer = pdfjsLib.renderTextLayer({
+                    textContentSource: textContent,
+                    container: textLayerDiv,
+                    viewport: viewport,
+                    textDivs: [],
+                    enhanceTextSelection: true // Enable enhanced text selection
+                });
+
+                return textLayer.promise;
+            }).then(() => {
+                // Ensure text is properly positioned
+                Array.from(textLayerDiv.children).forEach(span => {
+                    // Remove any shadows from spans
+                    span.style.textShadow = 'none';
+                    span.style.boxShadow = 'none';
+                });
+
                 // Update page positions for navigation
                 updatePagePositions();
 
@@ -139,6 +192,8 @@ const PageRenderer = (function() {
                         pageContainer.scrollIntoView();
                     }, 100);
                 }
+            }).catch(err => {
+                console.error('Error rendering text layer:', err);
             });
         });
     }

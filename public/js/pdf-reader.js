@@ -35,6 +35,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('pdf-zoom-level', newScale.toString());
                 PageRenderer.handleZoomChange();
             }
+        },
+        // Add highlight management methods to the public API
+        createHighlight: function(type) {
+            if (HighlightManager) {
+                HighlightManager.createHighlight(type);
+            }
+        },
+        clearHighlights: function() {
+            if (HighlightManager) {
+                HighlightManager.clearAllHighlights();
+            }
+        },
+        getHighlights: function() {
+            if (HighlightManager) {
+                return HighlightManager.getHighlights();
+            }
+            return [];
         }
     };
 });

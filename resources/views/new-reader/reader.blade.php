@@ -28,6 +28,7 @@
     <script src="{{ asset('js/pdf-modules/navigation.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/color-manager.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/ui-events.js') }}"></script>
+    <script src="{{ asset('js/pdf-modules/highlights.js') }}"></script>
 </head>
 
 <body>
@@ -74,6 +75,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                    </svg>
+                </button>
+
+                <button id="clear-highlights-btn" class="btn" title="Clear Highlights">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </button>
             </div>
@@ -153,6 +161,21 @@
             window.saveProgressUrl = "{{ route('books.update-progress', $book) }}";
             window.initialPage = {{ isset($enrollment) && $enrollment->current_page ? $enrollment->current_page : 1 }};
         @endif
+
+        // Initialize the highlights module after the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize highlights module after a small delay to ensure PDF.js is loaded
+            setTimeout(function() {
+                HighlightManager.init();
+
+                // Add event listener for the clear highlights button
+                document.getElementById('clear-highlights-btn').addEventListener('click', function() {
+                    if (confirm('Are you sure you want to clear all highlights?')) {
+                        HighlightManager.clearAllHighlights();
+                    }
+                });
+            }, 1000);
+        });
     </script>
 </body>
 
