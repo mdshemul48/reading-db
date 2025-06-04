@@ -1,0 +1,294 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: 'Figtree', sans-serif;
+}
+
+.reader-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.reader-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background-color: var(--bg-color, #fff);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    transition: transform 0.3s ease, background-color 0.3s ease, opacity 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    box-sizing: border-box;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+}
+
+.header-center {
+    display: flex;
+    align-items: center;
+    background-color: var(--muted-bg, #f9fafb);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    margin: 0 10px;
+    flex: 1;
+    justify-content: center;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.25rem;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: var(--text-color, #1f2937);
+}
+
+.btn:hover {
+    background-color: var(--hover-color, #f3f4f6);
+    transform: scale(1.05);
+}
+
+.btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+#pdf-container {
+    flex: 1;
+    overflow: auto;
+    background-color: var(--pdf-bg, #f7f7f7);
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb, #cbd5e1) var(--scrollbar-track, #f1f5f9);
+    padding-top: 65px;
+    scroll-behavior: smooth;
+}
+
+#pdf-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#pdf-container::-webkit-scrollbar-track {
+    background: var(--scrollbar-track, #f1f5f9);
+}
+
+#pdf-container::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb, #cbd5e1);
+    border-radius: 4px;
+}
+
+#pdf-viewer {
+    margin: 0 auto;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100%;
+    width: 100%;
+    max-width: 100%;
+}
+
+#pdf-viewer canvas {
+    margin-bottom: 40px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    transition: transform 0.3s ease;
+    animation: fadeIn 0.3s ease;
+    max-width: 90%;
+}
+
+.progress-bar-container {
+    height: 4px;
+    background-color: var(--muted-bg, #e5e7eb);
+    width: 100%;
+    position: fixed;
+    top: 57px;
+    left: 0;
+    z-index: 9;
+    transition: top 0.3s ease;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary-color, #3b82f6);
+    transition: width 0.3s ease;
+}
+
+.header-hidden .progress-bar-container {
+    top: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* CSS Variables for theming */
+:root {
+    --bg-color: #ffffff;
+    --text-color: #1f2937;
+    --border-color: #e5e7eb;
+    --pdf-bg: #f3f4f6;
+    --muted-bg: #f9fafb;
+    --primary-color: #3b82f6;
+    --hover-color: #f3f4f6;
+    --scrollbar-thumb: #cbd5e1;
+    --scrollbar-track: #f1f5f9;
+}
+
+/* Dark mode using CSS variables */
+.dark-mode {
+    --bg-color: #1f2937;
+    --text-color: #f9fafb;
+    --border-color: #374151;
+    --pdf-bg: #111827;
+    --muted-bg: #374151;
+    --primary-color: #60a5fa;
+    --hover-color: #374151;
+    --scrollbar-thumb: #4b5563;
+    --scrollbar-track: #1f2937;
+}
+
+/* Legacy dark mode support */
+.dark-mode img,
+.dark-mode canvas {
+    filter: invert(90%) hue-rotate(180deg);
+}
+
+/* Animation for page turning */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+    .header-left .title {
+        max-width: 150px;
+    }
+
+    .header-center {
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+
+    .btn {
+        padding: 8px;
+    }
+
+    .btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Page appearance animations */
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromTop {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.page-entering-bottom {
+    animation: slideInFromBottom 0.5s ease forwards;
+}
+
+.page-entering-top {
+    animation: slideInFromTop 0.5s ease forwards;
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--bg-color, #fff);
+    color: var(--text-color, #333);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease;
+    z-index: 5;
+}
+
+.scroll-indicator.hidden {
+    opacity: 0;
+}
+
+/* Loading indicator for pages */
+.page-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    margin-bottom: 40px;
+    width: 100%;
+}
+
+.page-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color, #e5e7eb);
+    border-top: 4px solid var(--primary-color, #3b82f6);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

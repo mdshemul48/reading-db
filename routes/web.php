@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
 
     // PDF Reader routes
     Route::get('/books/{book}/read', [BookReaderController::class, 'reader'])->name('books.reader');
+    Route::get('/books/{book}/new-read', [BookReaderController::class, 'newReader'])->name('books.new-reader');
     Route::post('/books/{book}/progress', [BookReaderController::class, 'updateProgress'])
         ->name('books.update-progress')
         ->middleware('web');

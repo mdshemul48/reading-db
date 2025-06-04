@@ -121,4 +121,47 @@ class BookReaderController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Show the new PDF reader for a book.
+     */
+    public function newReader(Book $book)
+    {
+        // Check if user can access this book
+        if ($book->is_private && $book->user_id !== auth()->id() && !auth()->user()->isEnrolledIn($book)) {
+            abort(403, 'You do not have access to this book.');
+        }
+
+        // Get enrollment record if user is enrolled
+        $enrollment = null;
+        if (auth()->user()->isEnrolledIn($book)) {
+            $enrollment = BookEnrollment::where('user_id', auth()->id())
+                ->where('book_id', $book->id)
+                ->first();
+
+            // Ensure there's a valid current_page
+            if (!$enrollment->current_page || $enrollment->current_page < 1) {
+                $enrollment->current_page = 1;
+                $enrollment->save();
+            }
+        } else if ($book->user_id === auth()->id()) {
+            // Auto-enroll the user if they own the book
+            $enrollment = BookEnrollment::firstOrCreate([
+                'user_id' => auth()->id(),
+                'book_id' => $book->id
+            ]);
+
+            // Set initial page to 1 if not set
+            if (!$enrollment->current_page) {
+                $enrollment->current_page = 1;
+                $enrollment->save();
+            }
+        }
+
+        // Get the PDF file URL - ensure it's a full URL
+        $pdfPath = $book->file_path;
+        $pdfUrl = url(Storage::url($pdfPath));
+
+        return view('new-reader.reader', compact('book', 'enrollment', 'pdfUrl'));
+    }
 }
