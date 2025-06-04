@@ -26,6 +26,7 @@
     <script src="{{ asset('js/pdf-modules/scroll.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/progress.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/navigation.js') }}"></script>
+    <script src="{{ asset('js/pdf-modules/color-manager.js') }}"></script>
     <script src="{{ asset('js/pdf-modules/ui-events.js') }}"></script>
 </head>
 
@@ -48,12 +49,12 @@
             </div>
 
             <div class="header-right">
-                <button id="dark-mode-toggle" class="btn" title="Toggle Dark Mode">
+                <div class="color-settings-toggle btn" id="color-settings-toggle" title="Color & Display Settings">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                     </svg>
-                </button>
+                </div>
 
                 <button id="zoom-in" class="btn" title="Zoom In">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -86,6 +87,59 @@
         <!-- PDF Container -->
         <div id="pdf-container">
             <div id="pdf-viewer"></div>
+        </div>
+
+        <!-- Color Settings Panel -->
+        <div class="color-settings-panel" id="color-settings-panel">
+            <h3>
+                Color & Display Settings
+                <button class="close-btn" id="close-settings-btn">&times;</button>
+            </h3>
+
+            <div class="form-group">
+                <label for="color-preset-selector">Color Theme</label>
+                <select id="color-preset-selector">
+                    <option value="light">Light</option>
+                    <option value="sepia">Sepia</option>
+                    <option value="green">Green</option>
+                    <option value="dark">Dark</option>
+                    <option value="warmDark">Warm Dark</option>
+                    <option value="darkBlue">Dark Blue</option>
+                    <option value="darkGreen">Dark Green</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="brightness-slider">Brightness</label>
+                <div class="range-container">
+                    <input type="range" id="brightness-slider" min="50" max="150" step="5"
+                        value="100">
+                    <span class="range-value" id="brightness-value">100%</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="contrast-slider">Contrast</label>
+                <div class="range-container">
+                    <input type="range" id="contrast-slider" min="50" max="150" step="5"
+                        value="100">
+                    <span class="range-value" id="contrast-value">100%</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="warmth-slider">Warmth</label>
+                <div class="range-container">
+                    <input type="range" id="warmth-slider" min="0" max="100" step="5"
+                        value="0">
+                    <span class="range-value" id="warmth-value">0%</span>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button class="reset" id="reset-settings-btn">Reset</button>
+                <button class="apply" id="apply-settings-btn">Apply</button>
+            </div>
         </div>
     </div>
 

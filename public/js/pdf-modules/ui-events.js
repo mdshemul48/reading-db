@@ -6,6 +6,9 @@ const UIEvents = (function() {
         const state = PDFCore.getState();
         const elements = PDFCore.init();
 
+        // Initialize color manager
+        ColorManager.init();
+
         // Scroll handling for lazy loading
         elements.pdfScrollContainer.addEventListener('scroll', ScrollManager.handleScroll);
 
@@ -18,32 +21,91 @@ const UIEvents = (function() {
             }
         });
 
-        // Toggle dark mode
-        elements.darkModeToggle.addEventListener('click', function() {
-            const state = PDFCore.getState();
-            const isDarkMode = !state.isDarkMode;
-            PDFCore.setState({ isDarkMode });
+        // Color settings panel
+        const colorSettingsToggle = document.getElementById('color-settings-toggle');
+        const colorSettingsPanel = document.getElementById('color-settings-panel');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
 
-            document.body.classList.toggle('dark-mode');
+        if (colorSettingsToggle && colorSettingsPanel) {
+            // Toggle settings panel
+            colorSettingsToggle.addEventListener('click', function() {
+                colorSettingsPanel.classList.toggle('visible');
 
-            // Update button icon
-            if (isDarkMode) {
-                elements.darkModeToggle.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                `;
-            } else {
-                elements.darkModeToggle.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                `;
+                // Update controls to match current settings when opening
+                if (colorSettingsPanel.classList.contains('visible')) {
+                    ColorManager.updateUIControls();
+                }
+            });
+
+            // Close settings panel
+            closeSettingsBtn.addEventListener('click', function() {
+                colorSettingsPanel.classList.remove('visible');
+            });
+
+            // Click outside to close
+            document.addEventListener('click', function(e) {
+                if (!colorSettingsPanel.contains(e.target) &&
+                    e.target !== colorSettingsToggle &&
+                    !colorSettingsToggle.contains(e.target)) {
+                    colorSettingsPanel.classList.remove('visible');
+                }
+            });
+
+            // Set up input event handlers for immediate feedback
+            const brightnessSlider = document.getElementById('brightness-slider');
+            if (brightnessSlider) {
+                brightnessSlider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    ColorManager.setBrightness(value);
+                    document.getElementById('brightness-value').textContent = value + '%';
+                });
             }
 
-            // Save preference
-            localStorage.setItem('pdf-dark-mode', isDarkMode);
-        });
+            const contrastSlider = document.getElementById('contrast-slider');
+            if (contrastSlider) {
+                contrastSlider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    ColorManager.setContrast(value);
+                    document.getElementById('contrast-value').textContent = value + '%';
+                });
+            }
+
+            const warmthSlider = document.getElementById('warmth-slider');
+            if (warmthSlider) {
+                warmthSlider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    ColorManager.setWarmth(value);
+                    document.getElementById('warmth-value').textContent = value + '%';
+                });
+            }
+
+            const presetSelector = document.getElementById('color-preset-selector');
+            if (presetSelector) {
+                presetSelector.addEventListener('change', function() {
+                    ColorManager.setColorPreset(this.value);
+                });
+            }
+
+            // Set up controls in color settings panel
+            ColorManager.setupControlListeners();
+
+            // Reset button
+            const resetBtn = document.getElementById('reset-settings-btn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    ColorManager.resetToDefaults();
+                });
+            }
+
+            // Apply button (immediately saves settings and closes panel)
+            const applyBtn = document.getElementById('apply-settings-btn');
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function() {
+                    ColorManager.applyColorTheme();
+                    colorSettingsPanel.classList.remove('visible');
+                });
+            }
+        }
 
         // Zoom controls
         elements.zoomIn.addEventListener('click', function() {
