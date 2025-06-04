@@ -69,6 +69,18 @@
                 `;
                 document.body.appendChild(tooltip);
                 console.log('Tooltip element created early to avoid timing issues');
+
+                // Setup auto-hide behavior for the early tooltip
+                if (typeof setupTooltipAutoHide === 'function') {
+                    setupTooltipAutoHide(tooltip);
+                } else {
+                    // If setupTooltipAutoHide isn't defined yet, wait and try again
+                    window.addEventListener('load', function() {
+                        if (typeof setupTooltipAutoHide === 'function') {
+                            setupTooltipAutoHide(tooltip);
+                        }
+                    });
+                }
             }
         });
 
@@ -118,6 +130,9 @@
                         tooltip.style.display = 'none';
                     });
                 });
+
+                // Setup auto-hide behavior for the newly created tooltip
+                setupTooltipAutoHide(tooltip);
             }
 
             // Store selected text as a data attribute
@@ -147,6 +162,73 @@
                 }
             }
         };
+
+        // Hide tooltip when mouse moves away
+        function setupTooltipAutoHide(tooltipElement) {
+            const tooltip = tooltipElement || document.getElementById('pdf-text-tooltip');
+            if (!tooltip) return;
+
+            // If the tooltip already has event listeners set up, don't add them again
+            if (tooltip.hasAttribute('data-autohide-setup')) return;
+            tooltip.setAttribute('data-autohide-setup', 'true');
+
+            let isOverTooltip = false;
+
+            // Track when mouse is over the tooltip
+            tooltip.addEventListener('mouseenter', function() {
+                isOverTooltip = true;
+                console.log('Mouse entered tooltip');
+            });
+
+            tooltip.addEventListener('mouseleave', function() {
+                isOverTooltip = false;
+                console.log('Mouse left tooltip');
+            });
+
+            // Hide tooltip when mouse moves away
+            const mouseMoveHandler = function(e) {
+                if (!tooltip || tooltip.style.display === 'none') return;
+
+                // Don't hide if mouse is over the tooltip
+                if (isOverTooltip) return;
+
+                // Get tooltip position and dimensions
+                const tooltipRect = tooltip.getBoundingClientRect();
+
+                // Define an expanded area around the tooltip (buffer zone)
+                const buffer = 50; // pixels
+                const expandedArea = {
+                    left: tooltipRect.left - buffer,
+                    right: tooltipRect.right + buffer,
+                    top: tooltipRect.top - buffer,
+                    bottom: tooltipRect.bottom + buffer
+                };
+
+                // Check if mouse is outside the expanded area
+                if (e.clientX < expandedArea.left ||
+                    e.clientX > expandedArea.right ||
+                    e.clientY < expandedArea.top ||
+                    e.clientY > expandedArea.bottom) {
+
+                    // Check if we still have a text selection
+                    const selection = window.getSelection();
+                    const selectedText = selection.toString().trim();
+
+                    // Only hide if text selection is gone or different
+                    if (!selectedText || selectedText !== tooltip.getAttribute('data-selected-text')) {
+                        tooltip.style.display = 'none';
+                        console.log('Hiding tooltip - mouse moved away');
+                    }
+                }
+            };
+
+            // Add the event listener only once
+            if (!window.tooltipMouseMoveHandlerAdded) {
+                document.addEventListener('mousemove', mouseMoveHandler);
+                window.tooltipMouseMoveHandlerAdded = true;
+                console.log('Added global mousemove handler for tooltip auto-hide');
+            }
+        }
 
         // Show notification
         function showPdfNotification(message) {
@@ -293,6 +375,9 @@
         // Initialize modules after the page loads
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM Content Loaded - Initializing PDF reader');
+
+            // Setup tooltip auto-hide behavior
+            setupTooltipAutoHide();
 
             // Add event listener for when PDF is fully loaded and rendered
             const pdfContainer = document.getElementById('pdf-container');
